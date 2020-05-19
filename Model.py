@@ -74,43 +74,62 @@ class Model:
             else:
                 print("simGrid at ",int(timeStep)*stepsPerday, " ",patch.cell,"is NoneType")
         
-        
-
+    
     def colorize_cellPatches(self,currResponse):
-        
-        # print(len(self.cellPatches))
         max=self.max
-           
-        alpha=.8
-        threshold1=max/3
-        threshold2=threshold1*2
-        delta=max/3
+        #Hue value from HSL color standard(0-360 degrees)
+        hue=197
+        hueFrac=197/360
+        sat=1 # represents 100 percent
+        threshold = .90 #maximum light value to avoid moving to black
+
         for i, patch in enumerate(self.cellPatches):
             respdata=float(patch.data[currResponse])
-            # print("data", respdata)
-            if(respdata>0 and respdata<threshold1):
-                relativeColor=respdata
-                alpha=relativeColor/delta
-                color=(0,0,1,alpha)
-            
-            elif(respdata>threshold1 and respdata<threshold2):
-                relativeColor=respdata-threshold1
-                alpha=relativeColor/delta
-                color=(0,1,0,alpha) 
+            lightness=(1-(respdata/max)*threshold)
+            color=colorsys.hls_to_rgb(hueFrac,lightness,sat)
 
-            elif(respdata>threshold2 and respdata <=max):
-                relativeColor=respdata-threshold2
-                alpha=relativeColor/delta
-                color=(1,0,0,alpha)
-
-
-            elif respdata==0:
-                color=(0,0,0,0)
-
-            else:
-                color=(0,0,0,0)
-                print("color is not in thresholds")            
             patch.polygonPatch.set_facecolor(color) 
+        
+ 
+   
+
+
+
+    # def colorize_cellPatches(self,currResponse):
+        
+    #     # print(len(self.cellPatches))
+    #     max=self.max
+           
+    #     alpha=.8
+    #     threshold1=max/3
+    #     threshold2=threshold1*2
+    #     delta=max/3
+    #     for i, patch in enumerate(self.cellPatches):
+    #         respdata=float(patch.data[currResponse])
+    #         # print("data", respdata)
+    #         if(respdata>0 and respdata<threshold1):
+    #             relativeColor=respdata
+    #             alpha=relativeColor/delta
+    #             color=(0,0,1,alpha)
+            
+    #         elif(respdata>threshold1 and respdata<threshold2):
+    #             relativeColor=respdata-threshold1
+    #             alpha=relativeColor/delta
+    #             color=(0,1,0,alpha) 
+
+    #         elif(respdata>threshold2 and respdata <=max):
+    #             relativeColor=respdata-threshold2
+    #             alpha=relativeColor/delta
+    #             color=(1,0,0,alpha)
+
+
+    #         elif respdata==0:
+    #             color=(0,0,0,0)
+
+    #         else:
+    #             color=(0,0,0,0)
+    #             print("color is not in thresholds")            
+    #         patch.polygonPatch.set_facecolor(color) 
         
  
    
@@ -128,12 +147,7 @@ class Model:
 
 
     def create_legend(self):
-        p1=Patch(facecolor='blue',label='Low')
-        p2=Patch(facecolor='green',edgecolor='grey',label='Med')
-        p3=Patch(facecolor='red',edgecolor='grey',label='High')
-        legend_elements=[p1]
-
-        self.fig.legend(handles=[p1,p2,p3])
+        pass
 # end plotting functions *******************************************************
 
 # start helper functions******************************************************
@@ -150,7 +164,7 @@ class Model:
     def determine_cell_from_point(self,x_coord,y_coord):
         found =False
         currPatch=None
-        for i, patch in self.cellPatches:
+        for patch in self.cellPatches:
             if patch.polygon.contains(Point(x_coord,y_coord)):
                 currPatch=patch
                 found=True
