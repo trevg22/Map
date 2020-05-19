@@ -2,7 +2,7 @@
 # Model.py
 # Model class to process data and handle voronoi tesselation and cell data
 import matplotlib.pyplot as plt
-from data_reader3 import Reader
+from data_reader import Reader
 from Polymap import cellPatch
 from shapely.ops import polygonize
 from scipy.spatial import Voronoi
@@ -11,6 +11,7 @@ import shapely
 from matplotlib.patches import Patch
 from shapely.geometry import Point
 from fractions import Fraction
+import colorsys
 
 class Model:
     def __init__(self):
