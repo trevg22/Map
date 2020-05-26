@@ -91,48 +91,6 @@ class Model:
             patch.polygonPatch.set_facecolor(color) 
         
  
-   
-
-
-
-    # def colorize_cellPatches(self,currResponse):
-        
-    #     # print(len(self.cellPatches))
-    #     max=self.max
-           
-    #     alpha=.8
-    #     threshold1=max/3
-    #     threshold2=threshold1*2
-    #     delta=max/3
-    #     for i, patch in enumerate(self.cellPatches):
-    #         respdata=float(patch.data[currResponse])
-    #         # print("data", respdata)
-    #         if(respdata>0 and respdata<threshold1):
-    #             relativeColor=respdata
-    #             alpha=relativeColor/delta
-    #             color=(0,0,1,alpha)
-            
-    #         elif(respdata>threshold1 and respdata<threshold2):
-    #             relativeColor=respdata-threshold1
-    #             alpha=relativeColor/delta
-    #             color=(0,1,0,alpha) 
-
-    #         elif(respdata>threshold2 and respdata <=max):
-    #             relativeColor=respdata-threshold2
-    #             alpha=relativeColor/delta
-    #             color=(1,0,0,alpha)
-
-
-    #         elif respdata==0:
-    #             color=(0,0,0,0)
-
-    #         else:
-    #             color=(0,0,0,0)
-    #             print("color is not in thresholds")            
-    #         patch.polygonPatch.set_facecolor(color) 
-        
- 
-   
 
 # end cellpatch/polygon functions**********************************************
 
