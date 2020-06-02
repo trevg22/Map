@@ -12,36 +12,42 @@ from ttkthemes import ThemedStyle
 
 class View:
 
-    def __init__(self,root,model):
+    def __init__(self,root,mapModel):
         # Class members
-        self.model=model
+        self.root=root
+        self.mapModel=mapModel
         self.curr_cellPatch=None
         root.title("Impact Map Viewer 0.0.2")
 
-        plotFrame,controlFrame,dataFrame=self.create_frames(root)
-        self.fig,self.ax=self.model.get_fig_ax()
+        self.create_mapFrames(root)
+        self.create_netFrames()
+        self.fig,self.ax=self.mapModel.get_fig_ax()
         self.create_menuBar(root)
-        self.create_mapControlWidgets(controlFrame)
-        self.create_mapDataView(dataFrame)
-        self.canvas=self.create_mapCavas(plotFrame)
-        self.place_frames(plotFrame,controlFrame,dataFrame)
-
+        self.create_mapControlWidgets(self.mapControlFrame)
+        self.create_mapDataView(self.mapDataFrame)
+        self.mapCanvas=self.create_mapCavas(self.mapPlotFrame)
+        self.netCanvas=self.create_netCanvas(self.netPlotFrame)
+        self.pack_mapFramess()
+        self.toggle='Map'
 #start gui objects***************************************************
-    def create_frames(self, root):
-            plotFrame = ttk.Frame(root)
-            controlFrame = ttk.Frame(root)
-            dataFrame=ttk.LabelFrame(root,text="Responses")
+    def create_mapFrames(self, root):
+            self.mapPlotFrame = ttk.Frame(root)
+            self.mapControlFrame = ttk.Frame(root)
+            self.mapDataFrame=ttk.LabelFrame(root,text="Responses")
             root.columnconfigure(0, weight=1)
             root.rowconfigure(1, weight=1)
 
-            plotFrame.columnconfigure(0, weight=1)
-            plotFrame.rowconfigure(0, weight=1)
-            return plotFrame, controlFrame,dataFrame
-
+            self.mapPlotFrame.columnconfigure(0, weight=1)
+            self.mapPlotFrame.rowconfigure(0, weight=1)
+    
+    def create_netFrames(self):
+        self.netPlotFrame=ttk.Frame(self.root)
+        
     def create_menuBar(self, frame):
         menuBar = tk.Menu(frame)
         fileMenu = tk.Menu(menuBar, tearoff=0)
         fileMenu.add_command(label='Load Mav',command=self.spinup_mapDataSet)
+        fileMenu.add_command(label='toggle',command=self.toggle_GUI)
         fileMenu.add_command(label='load map')
         menuBar.add_cascade(label='File', menu=fileMenu)
         editMenu = tk.Menu(menuBar, tearoff=0)
@@ -51,7 +57,6 @@ class View:
         frame.config(menu=menuBar)
 
     def create_mapControlWidgets(self, frame):
-            
         self.selectTime_slider = tk.Scale(
                           frame,orient=tk.HORIZONTAL,command=self.mapTimeSlider_released)
         self.respDropdown=ttk.Combobox(frame,width=27,state="readonly")
@@ -72,13 +77,23 @@ class View:
         toolbar = NavigationToolbar2Tk(canvas, frame)
         toolbar.update()
         return canvas
+        
+    def create_netCanvas(self,frame):
+        canvas = FigureCanvasTkAgg(self.fig, master=frame)
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH,
+                                    expand=True)
+        toolbar = NavigationToolbar2Tk(canvas, frame)
+        toolbar.update()
+        return canvas 
 
-    def place_frames(self, plotFrame, controlFrame,dataFrame):
-            controlFrame.grid(row=0, column=0,sticky=tk.W + tk.E)
-            plotFrame.grid(row=1, column=0, columnspan=3,
+    def pack_mapFramess(self):
+            self.mapControlFrame.grid(row=0, column=0,sticky=tk.W + tk.E)
+            self.mapPlotFrame.grid(row=1, column=0, columnspan=3,
                         sticky=tk.W + tk.E + tk.N + tk.S)
-            dataFrame.grid(row=0,column=4,rowspan=3)
-
+            self.mapDataFrame.grid(row=0,column=4,rowspan=3)
+        
+    def pack_netFrames(self):
+        self.netPlotFrame.grid(row=0,column=0)
 
 
 # end gui objects************************************************************
@@ -87,47 +102,63 @@ class View:
         cwd=os.getcwd()
         dataFile=tk.filedialog.askopenfilename(initialdir=cwd)
         
-        self.model.read_mav_coords(dataFile,'coords.json')
-        self.responses=self.model.get_responses()
-        self.model.create_cellPatches()
+        self.mapModel.read_mav_coords(dataFile,'coords.json')
+        self.responses=self.mapModel.get_responses()
+        self.mapModel.create_cellPatches()
         
-        self.model.plot_cellPatches()
+        self.mapModel.plot_cellPatches()
         self.mapConfigure_plot()
-        self.model.create_legend()
+        self.mapModel.create_legend()
         self.mapConfigure_widgets()
         
         self.dropdownIndex=int(self.respDropdown.current())
-        self.model.find_max(self.dropdownIndex) # replace with process data or something
+        self.mapModel.find_max(self.dropdownIndex) # replace with process data or something
         time=self.selectTime_slider.get()
-        self.model.update_cellPatches(0,time)
-        self.model.colorize_cellPatches(self.dropdownIndex)
-        self.canvas.draw()
+        self.mapModel.update_cellPatches(0,time)
+        self.mapModel.colorize_cellPatches(self.dropdownIndex)
+        self.mapCanvas.draw()
          
     def import_data(self):
         pass
     def mapTimeSlider_released(self,event):  
         time=self.selectTime_slider.get()
-        self.model.update_cellPatches(0,time)
-        self.model.colorize_cellPatches(self.dropdownIndex)
-        self.canvas.draw()
+        self.mapModel.update_cellPatches(0,time)
+        self.mapModel.colorize_cellPatches(self.dropdownIndex)
+        self.mapCanvas.draw()
     
     def mapDropdown_changed(self,event):
         #print("changed to ", self.respDropdown.current())
         
         self.dropdownIndex=int(self.respDropdown.current())
-        self.model.colorize_cellPatches(self.dropdownIndex)
-        self.canvas.draw()
+        self.mapModel.colorize_cellPatches(self.dropdownIndex)
+        self.mapCanvas.draw()
 
     def mapMouse_moved(self,event):
        self.mapDetect_cellChange(event)
+
+    def toggle_GUI(self):
+
+        if self.toggle=="Map":
+           self.mapPlotFrame.grid_forget()
+           self.mapControlFrame.grid_forget()
+           self.mapDataFrame.grid_forget()
+           self.pack_netFrames()
+           self.toggle="Net"
+        elif self.toggle=="Net":
+            self.netPlotFrame.grid_forget()
+            self.pack_mapFramess()
+            self.toggle="Map"
+        else:
+            print("Toggle has invalid value")
+
 # end gui object direct calls(one per)**********************************************
 
 # start supporting functions************************************************
     def mapDetect_cellChange(self,event):
         if event.inaxes==self.ax:
-            mouse_in_cell=self.model.is_point_in_cell(event.xdata,event.ydata,self.curr_cellPatch)
+            mouse_in_cell=self.mapModel.is_point_in_cell(event.xdata,event.ydata,self.curr_cellPatch)
             if mouse_in_cell==False:
-                self.curr_cellPatch,found=self.model.determine_cell_from_point(event.xdata,event.ydata)
+                self.curr_cellPatch,found=self.mapModel.determine_cell_from_point(event.xdata,event.ydata)
 
                 if found:
                     print("changed to cell : ", self.curr_cellPatch.get_cell())
@@ -172,7 +203,7 @@ class View:
 
     def mapConfigure_widgets(self):
         # configure timeSlider passed on input data
-        range,stepsPerday=self.model.get_timeParams()
+        range,stepsPerday=self.mapModel.get_timeParams()
         timeSliderRes=1/stepsPerday
         self.selectTime_slider.config(resolution=timeSliderRes,from_=range[0],to=range[1],digits=4)
 
