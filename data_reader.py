@@ -44,16 +44,18 @@ class simInst():
         if self.simGrid[timeIndex] is None:
             cellArr=[None]*numCells
             self.simGrid[timeIndex]=cellArr
-        
         self.simGrid[timeIndex][cell] = dataBy_cell_time(dataLine, cell, time)
 
+        if isinstance(dataLine,int):
+            print("blah")
     def set_simPrefix(self, inc_simPrefix):
         self.simPrefix = inc_simPrefix
     
     def set_responses(self,responses):
         self.responses=responses
 
-
+    def get_simPrefix(self):
+        return self.simPrefix
 # Poplulats list of simInst objects from JSON
 
 
@@ -68,29 +70,31 @@ class Reader:
             temp = coords[x][0]
             coords[x][0] = coords[x][1]
             coords[x][1] = temp
-
-        return coords
+            return coords
 
     def readMav_file(self, file):
         with open(file, 'r') as f:
             data = json.load(f)
 
         self.simList = []
-        self.timeSteps = data["impact-viewer"]["variables"]["Time"]
-        self.numCells = 61  # remove hardcode
-        numVars = 1
+        self.timeSteps = data["map-viewer"]["variables"]["Time"]
+        self.coords=data["map-viewer"]["variables"]["Cells"]
+        self.numCells=len(self.coords)
+        print(self.coords)
+        numVars=len(data["map-viewer"]["variables"]) -2 # subtract 1 because time,cells is not part of "sim id"
 #        numResponses = len(data["impact-viewer"]["groups"])
-        self.responses = list(data["impact-viewer"]["groups"].values())
+        self.responses = list(data["map-viewer"]["groups"].values())
         print("mav ran")
         # print(self.responses)
         prevSim = None
         startIndex=numVars+2
-
-        for dataLine in data["impact-viewer"]["values"]:
+        for dataLine in data["map-viewer"]["values"]:
             
+            simPrefix=''
             count = 0
             found = False
-            simPrefix = dataLine[0]  # needs to be made dynamic list
+            for x in range(numVars):
+                simPrefix+=str(dataLine[x])
             # Create new simInst if none exist
             if len(self.simList) == 0:
                 
@@ -99,6 +103,7 @@ class Reader:
                 self.simList[0].set_responses(self.responses)
                 prevSim.addElement(
                         dataLine[startIndex:], dataLine[numVars + 1], dataLine[numVars],self.numCells) 
+                prevSim.set_simPrefix(simPrefix)
             else:
                 # if Incoming data belongs to same sim as previous data,
                 # no need to loop
@@ -112,7 +117,7 @@ class Reader:
                         if self.simList[count].simPrefix == simPrefix:
                             # this addElement will pass in dataLine as an int not a list
                             self.simList[count].addElement(
-                                dataLine[startIndex], dataLine[numVars + 1], dataLine[numVars],self.numCells)
+                                dataLine[startIndex:], dataLine[numVars + 1], dataLine[numVars],self.numCells)
                             prevSim = self.simList[count]
                             found = True
                         count = count + 1
@@ -122,11 +127,16 @@ class Reader:
                             simInst(simPrefix, self.numCells, self.timeSteps))
                         found = True
         
-        
+        self.print_SimInst(self.simList)
         return self.simList
 
     
+    def print_SimInst(self,simList):
+        print("simulations")
 
+        for sim in simList:
+            print(sim.simPrefix)
+        
     def get_timesteps(self):
         return self.timeSteps
         
@@ -139,3 +149,14 @@ class Reader:
     
     def get_simInst(self,simId):
         return self.simList[simId]
+        
+    def get_simIdList(self):
+       simIds=[]
+       for sim in self.simList:
+           simIds.append(sim.get_simPrefix())
+           print(sim.get_simPrefix()) 
+       return simIds
+    def get_cellCoords(self):
+       return self.coords
+    
+
