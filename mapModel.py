@@ -175,7 +175,7 @@ class mapModel:
                 
                 value=currSim.simGrid[time][cell].dataLine[currResponse]
 
-                if value>max:
+                if value is not None and value>max:
                     max=value
         self.max = max
 
@@ -217,9 +217,15 @@ class mapModel:
     def get_simIdList(self):
         return self.mavReader.get_simIdList()
 
-    def set_currSim(self,index):
-        self.currSim=self.simList[index]
-        print("setting sim to ", index)
+    def set_currSim(self,simId):
+        for sim in self.simList:
+            print(sim)
+        for sim in self.simList:
+            if sim.simPrefix==simId:
+                self.currSim=sim
+                print("setting sim to ", simId)
+                break
+
     def get_vorPlotLim(self):
         
         coordsInv=zip(*self.vorCoords)
@@ -230,4 +236,7 @@ class mapModel:
         min_y=min(coordsInv[1])
         max_y=max(coordsInv[1])
         return [[min_x,max_x],[min_y,max_y]]
+
+    def get_indepVars(self):
+        return self.mavReader.get_IndVars()
 #end getter/setter methods *****************************************************

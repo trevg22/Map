@@ -1,8 +1,14 @@
 import json
 import numpy as np
+import os
 # from collections import namedtuple
 # Stores list of responses at specific cell and time
 
+class indepVar():
+
+    def __init__(self,inc_name,inc_label):
+        self.name=inc_name
+        self.labels=inc_label
 
 class dataBy_cell_time():
 
@@ -76,12 +82,18 @@ class Reader:
         with open(file, 'r') as f:
             data = json.load(f)
 
+
+       
         self.simList = []
         self.timeSteps = data["map-viewer"]["variables"]["Time"]
         self.coords=data["map-viewer"]["variables"]["Cells"]
         self.numCells=len(self.coords)
-        print(self.coords)
         numVars=len(data["map-viewer"]["variables"]) -2 # subtract 1 because time,cells is not part of "sim id"
+        self.names=list(data["map-viewer"]["variables"].keys())[:numVars]
+        print(self.names)
+        self.labels=list(data["map-viewer"]["variables"].values())[:numVars]
+        print(self.labels)
+        
 #        numResponses = len(data["impact-viewer"]["groups"])
         self.responses = list(data["map-viewer"]["groups"].values())
         print("mav ran")
@@ -90,11 +102,12 @@ class Reader:
         startIndex=numVars+2
         for dataLine in data["map-viewer"]["values"]:
             
-            simPrefix=''
             count = 0
             found = False
-            for x in range(numVars):
-                simPrefix+=str(dataLine[x])
+
+            simPrefix=dataLine[:numVars]
+            #for x in range(numVars):
+                #simPrefix+=str(dataLine[x])
             # Create new simInst if none exist
             if len(self.simList) == 0:
                 
@@ -103,7 +116,7 @@ class Reader:
                 self.simList[0].set_responses(self.responses)
                 prevSim.addElement(
                         dataLine[startIndex:], dataLine[numVars + 1], dataLine[numVars],self.numCells) 
-                prevSim.set_simPrefix(simPrefix)
+                
             else:
                 # if Incoming data belongs to same sim as previous data,
                 # no need to loop
@@ -158,5 +171,14 @@ class Reader:
        return simIds
     def get_cellCoords(self):
        return self.coords
-    
 
+    def get_IndVars(self):
+        self.indVars=[]
+        if len(self.names)==len(self.labels):
+            for x in range(len(self.names)):
+                self.indVars.append(indepVar(self.names[x],self.labels[x]))
+        else:
+            print("Indep Var dimension mismatch")
+            quit() 
+
+        return self.indVars

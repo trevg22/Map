@@ -65,14 +65,11 @@ class View:
         frame.config(menu=menuBar)
 
     def create_mapControlWidgets(self, frame):
-        self.idDropDown=ttk.Combobox(frame,width=7,state='readonly')
         self.selectTime_slider = tk.Scale(
                           frame,orient=tk.HORIZONTAL)
         self.selectTime_slider.bind("<ButtonRelease-1>",self.mapTimeSlider_released)
         self.respDropdown=ttk.Combobox(frame,width=27,state="readonly")
         self.respDropdown.bind("<<ComboboxSelected>>",self.mapDropdown_changed)
-        self.idDropDown.bind("<<ComboboxSelected>>",self.map_idDropDown_changed)
-        self.idDropDown.grid(row=1,column=0)
         self.respDropdown.grid(row=1,column=2)       
         self.selectTime_slider.grid(row=1, column=1)
     
@@ -133,7 +130,7 @@ class View:
         self.mapModel.find_max(self.dropdownIndex) # replace with process data or something
         print("dataSet up")
         time=self.selectTime_slider.get()
-        self.mapModel.set_currSim(0)
+        self.mapModel.set_currSim(self.get_dropDownSimId())
         self.mapModel.update_cellPatches(time)
         self.mapModel.print_SimInst([0,.5,1],1,5)
         print("Print ran")
@@ -159,8 +156,8 @@ class View:
 
     def map_idDropDown_changed(self,event):
         time=self.selectTime_slider.get()
-        index=int(self.idDropDown.current())
-        self.mapModel.set_currSim(index)
+        simId=self.get_dropDownSimId()
+        self.mapModel.set_currSim(simId)
         self.mapModel.update_cellPatches(time)
         self.mapModel.find_max(self.dropdownIndex)
         self.mapModel.colorize_cellPatches(self.dropdownIndex)
@@ -270,13 +267,12 @@ class View:
         self.mapAx.set_ylim(limits[1][0],limits[1][1])
 
     def mapConfigure_widgets(self):
+        self.mapCreate_idDropDowns()
         # configure timeSlider passed on input data
         range,stepsPerday=self.mapModel.get_timeParams()
         timeSliderRes=1/stepsPerday
         self.selectTime_slider.config(resolution=timeSliderRes,from_=range[0],to=range[1],digits=4)
         simIds=self.mapModel.get_simIdList()
-        self.idDropDown.config(values=simIds)
-        self.idDropDown.set(simIds[0])
         print("sim Ids",simIds)
         # configure target/response dropdown
         responses=self.responses
@@ -290,7 +286,25 @@ class View:
     def netConfigure_widgets(self):
         self.netAx.set_picker(picker=True)
         self.netClickCid=self.netFig.canvas.mpl_connect('pick_event',self.netMouse_clicked)
+
+    def mapCreate_idDropDowns(self):
+        self.idDropDowns=[]
+        indepVars=self.mapModel.get_indepVars() 
+
+        for x, var in enumerate(indepVars):
+            self.idDropDowns.append(ttk.Combobox(self.mapControlFrame,state="readonly"))
+            self.idDropDowns[x].grid(row=1,column=x)
+            self.idDropDowns[x].configure(values=var.labels)
+            self.idDropDowns[x].bind("<<ComboboxSelected>>",self.map_idDropDown_changed)
+            self.idDropDowns[x].set(var.labels[0])
 # end widget/plotconfigure methods******************************************************
+# start getter/setter methods
+
+    def get_dropDownSimId(self):
+       list=[(int(x.current())+1) for x in self.idDropDowns] 
+       
+       return list
+# end getter/setter methods
 # start main
 def main():
     root = tk.Tk()
