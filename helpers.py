@@ -1,39 +1,27 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.spatial import Voronoi
-from shapely.geometry import Polygon
-from descartes import PolygonPatch
+#Map Viewer
+# helpers.py
+#contains helper functions not specific to a class
 import random
 
-def random_color(as_str=False, alpha=0.5):
-        rgb = [random.randint(0,255),
-        random.randint(0,255),
-        random.randint(0,255)]
-        if as_str:
-            return "rgba"+str(tuple(rgb+[alpha]))
-        else:
-        # Normalize & listify
-            return list(np.array(rgb)/255) + [alpha]
+import matplotlib.pyplot as plt
+import numpy as np
+from descartes import PolygonPatch
+from scipy.spatial import Voronoi
+from shapely.geometry import Polygon
 
+# return a random rgba list
+def random_color(as_str=False, alpha=0.5):
+    rgb = [random.randint(0, 255),
+           random.randint(0, 255),
+           random.randint(0, 255)]
+    if as_str:
+        return "rgba"+str(tuple(rgb+[alpha]))
+    else:
+        # Normalize & listify
+        return list(np.array(rgb)/255) + [alpha]
+
+# take scipy vor and bound infinite regions
 def voronoi_finite_polygons_2d(vor, radius=None):
-    """
-    Reconstruct infinite voronoi regions in a 2D diagram to finite
-    regions.
-    Parameters
-    ----------
-    vor : Voronoi
-        Input diagram
-    radius : float, optional
-        Distance to 'points at infinity'.
-    Returns
-    -------
-    regions : list of tuples
-        Indices of vertices in each revised Voronoi regions.
-    vertices : list of tuples
-        Coordinates for revised Voronoi vertices. Same as coordinates
-        of input vertices, with 'points at infinity' appended to the
-        end.
-    """
 
     if vor.points.shape[1] != 2:
         raise ValueError("Requires 2D input")
@@ -73,7 +61,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 
             # Compute the missing endpoint of an infinite ridge
 
-            t = vor.points[p2] - vor.points[p1] # tangent
+            t = vor.points[p2] - vor.points[p1]  # tangent
             t /= np.linalg.norm(t)
             n = np.array([-t[1], t[0]])  # normal
 
@@ -87,7 +75,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
         # sort region counterclockwise
         vs = np.asarray([new_vertices[v] for v in new_region])
         c = vs.mean(axis=0)
-        angles = np.arctan2(vs[:,1] - c[1], vs[:,0] - c[0])
+        angles = np.arctan2(vs[:, 1] - c[1], vs[:, 0] - c[0])
         new_region = np.array(new_region)[np.argsort(angles)]
 
         # finish
@@ -97,25 +85,26 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 
 # make up data points
 # compute Voronoi tesselation
-def get_vorPolys(vorPoints,boundPoints):
+
+# return voronoi cell bounded by boundpoints
+def get_vorPolys(vorPoints, boundPoints):
     vor = Voronoi(vorPoints)
-    
+
     min_x = vor.min_bound[0] - 0.1
     max_x = vor.max_bound[0] + 0.1
     min_y = vor.min_bound[1] - 0.1
     max_y = vor.max_bound[1] + 0.1
-    boundPoly=Polygon([p[0],p[1]] for p in boundPoints)
+    boundPoly = Polygon([p[0], p[1]] for p in boundPoints)
 
+    # if no bounPoints draw rectantle as bounding polygon
     if not boundPoints:
-        boundPoly=Polygon([[min_x,min_y],[max_x,min_y],[max_x,max_y],[min_x,max_y]])
-            
-    # plot
+        boundPoly = Polygon([[min_x, min_y], [max_x, min_y], [
+                            max_x, max_y], [min_x, max_y]])
+
     regions, vertices = voronoi_finite_polygons_2d(vor)
 
-       #poly = geometry.Polygon([[p.x, p.y] for p in pointList])
-    polygons=[]
+    polygons = []
 
-    # colorize
     for region in regions:
         polygon = vertices[region]
         # Clipping polygon
@@ -123,6 +112,5 @@ def get_vorPolys(vorPoints,boundPoints):
         if poly.intersects(boundPoly):
             poly = poly.intersection(boundPoly)
         polygons.append(poly)
-    
-    return polygons,boundPoly
 
+    return polygons, boundPoly

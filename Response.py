@@ -5,7 +5,7 @@ import colorsys
 # a cell response metric
 
 
-class response:
+class Response:
 
     def __init__(self):
         self.name = ""
@@ -19,7 +19,7 @@ class response:
 # a group of responses that need to be treated similarly
 
 
-class responseGroup:
+class ResponseGroup:
     def __init__(self):
         self.group = ""
         self.hue = 0

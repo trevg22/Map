@@ -1,129 +1,43 @@
-# Impact Map viewer 
+# Map Viewer
 # Model.py
 # Model class to process data and handle voronoi tesselation and cell data
-import matplotlib.pyplot as plt
-from data_reader import Reader
-from Polymap import cellPatch
-from shapely.ops import polygonize
-from scipy.spatial import Voronoi
-from descartes import PolygonPatch
-import shapely
-from matplotlib.patches import Patch
-from shapely.geometry import Point
-from fractions import Fraction
 import colorsys
+import os
+from fractions import Fraction
+
+import matplotlib.pyplot as plt
+import shapely
+from shapely.geometry import Point
+from shapely.ops import polygonize
+
+from CellHandler import CellHandler
+from data_reader import Reader
 from helpers import get_vorPolys
+from Response import Response
 
 
 class mapModel:
     def __init__(self):
-        self.mavReader=None
-        self.coords=None
-        self.simList=None
-        self.cellPatches=None
-        self.fig=plt.Figure()
-        self.ax=self.fig.add_subplot(111)
-        self.debugcount=0
-        self.num_cells=60
-        self.currSim=None
+        self.coords = None
+        self.simList = None
+        self.cellPatches = None
+        self.debugcount = 0
+        self.currSim = None
+        self.cellhandler = CellHandler()
+        self.reader = Reader()
 # start reader functions *********************************************************
-    def read_coords(self,file):
-        #self.coords=self.mavReader.readCoordJson(file)
-        self.coords=self.mavReader.get_cellCoords()
 
-    def read_mav(self,file):
-        self.simList=self.mavReader.readMav_file(file)
-    def read_mav_coords(self,mavFile,coordFile):
-        
-        self.mavReader=Reader()
-        self.read_mav(mavFile)
-        self.read_coords(coordFile)
+    def read_mav(self, file):
+        self.simList = self.reader.readMav_file(file)
+        self.cellCenters = self.reader.get_cellCoords()
+        self.timeSteps = self.reader.get_timesteps()
 
 # start cellpatch/polygon functions********************************************
-    def create_cellPatches(self):
+    def create_cells(self, vorCoords, boundCoords):
+        self.cells, boundCell = self.cellhandler.create_cellPolys(
+            vorCoords, boundCoords)
 
-        self.vorCoords=[[coord[1],coord[0]] for coord in self.coords]
-        
-        polygons,boundPoly=get_vorPolys(self.vorCoords,[])
-        polyList = list(polygons)
-        vorCoords_list=[Point(coord[0],coord[1]) for coord in self.vorCoords]
-        cellPatches = []
-        
-        for poly in polyList:
-            cellPatches.append(cellPatch(PolygonPatch(poly,fc='white'),poly))
-            print(poly)
-
-        for i, poly in enumerate(polyList):
-
-            for x, point in enumerate(vorCoords_list):
-
-                if poly.contains(point):
-
-                    cellPatches[i].set_cell(x)
-                
-        self.cellPatches= cellPatches        
-
-    def create_cellPatches_old(self):
-        num_cells=60
-        vor = Voronoi(self.coords)
-        finiteSegments = [
-            shapely.geometry.LineString(vor.vertices[line])
-            for line in vor.ridge_vertices
-            if -1 not in line
-        ]
-        polygons = polygonize(finiteSegments)
-        polyList = list(polygons)
-        coord_pointList=[Point(coord[0],coord[1]) for coord in self.coords]
-        cellPatches = []
-        
-        for poly in polyList:
-            cellPatches.append(cellPatch(PolygonPatch(poly,fc='white'),poly))
-
-        for i, poly in enumerate(polyList):
-
-            for x, point in enumerate(coord_pointList):
-
-                if poly.contains(point):
-
-                    cellPatches[i].set_cell(x)
-                
-        self.cellPatches= cellPatches        
-
-    def update_cellPatches(self,timeStep):
-        currSim=self.currSim
-    
-        range,stepsPerday=self.get_timeParams()
-        self.stepsPerday=stepsPerday
-        #print("TimeStep",timeStep)
-        #print("StepsPerDay",stepsPerday)
-        #print("sim Grid len ", len(currSim.simGrid))
-        for i,patch in enumerate(self.cellPatches):
-            if currSim.simGrid[round(timeStep*stepsPerday)][patch.cell] is not None:
-                patch.data=currSim.simGrid[round(timeStep*stepsPerday)][patch.cell].dataLine
-                #print(patch.data," cell ", patch.cell," index ",i)
-            else:
-                #print("simGrid at ",int(timeStep)*stepsPerday, " ",patch.cell,"is NoneType")
-                pass
-        
-    
-    def colorize_cellPatches(self,currResponse):
-        max=self.max
-        #Hue value from HSL color standard(0-360 degrees)
-        hue=197
-        hueFrac=hue/360
-        sat=1 # represents 100 percent
-        threshold = .90 #maximum light value to avoid moving to black
-
-        for i, patch in enumerate(self.cellPatches):
-            #print("Patch data for cell num",patch.cell," ", patch.data)
-            if max>0 and patch.data[currResponse] is not None:
-                respdata=float(patch.data[currResponse])
-                lightness=(1-(respdata/max)*threshold)
-                color=colorsys.hls_to_rgb(hueFrac,lightness,sat)
-                patch.polygonPatch.set_facecolor(color) 
-            else:
-                color=[0,0,0]
-        #print("colorized!")    
+        return self.cells, boundCell
 
 # end cellpatch/polygon functions**********************************************
 
@@ -134,109 +48,142 @@ class mapModel:
     def plot_cellPatches(self):
         for patch in self.cellPatches:
             self.ax.add_patch(patch.polygonPatch)
-            
-
 
     def create_legend(self):
         pass
 # end plotting functions *******************************************************
 
 # start helper functions******************************************************
-    def is_point_in_cell(self,x_coord,y_coord,cellPatch):
-            
-            if cellPatch is None:
-                return False
-            elif cellPatch.polygon.contains(Point(x_coord,y_coord)):
+    def is_point_in_cell(self, x_coord, y_coord, cellNum):
+
+        if cellNum is None or x_coord is None or y_coord is None:
+            return False
+        else:
+            cell = self.cells[cellNum-1]
+            if cell.polygon.contains(Point(x_coord, y_coord)):
                 return True
-            else: 
+            else:
                 return False
 
+    def determine_cell_from_point(self, x_coord, y_coord):
+        found = False
+        for cell in self.cells:
+            if cell.get_polygon().contains(Point(x_coord, y_coord)):
+                currCell = cell.get_cellNum()
+                found = True
 
-    def determine_cell_from_point(self,x_coord,y_coord):
-        found =False
-        currPatch=None
-        for patch in self.cellPatches:
-            if patch.polygon.contains(Point(x_coord,y_coord)):
-                currPatch=patch
-                found=True
-        
-        
-        return currPatch,found
+        if not found:
+            currCell = 0
+        return currCell, found
 
-    def find_max(self,currResponse):
-        print("find max called")
-        currSim=self.simList[0]
-        max=0
-
-        for time in range(len(currSim.simGrid)):
-            for cell in range(len(currSim.simGrid[time])):
-            
-                #print("time ",time," cell ",cell)
-                
-                value=currSim.simGrid[time][cell].dataLine[currResponse]
-
-                if value is not None and value>max:
-                    max=value
-        self.max = max
-
-    def print_SimInst(self,timeSteps,startCell,endCell):
-        currSim=self.simList[0]
+    def print_SimInst(self, timeSteps, startCell, endCell):
 
         for time in timeSteps:
             print("time: ", time)
             for i in range(endCell-startCell):
-                value=currSim.simGrid[round(time*self.stepsPerday)][startCell+i].dataLine
-                print("cell ", startCell+i," ", value)
+                value = self.currSim.simGrid[round(
+                    time*self.stepsPerday)][startCell+i].dataLine
+                print("cell ", startCell+i, " ", value)
+
+    def initialize_respObjs(self):
+        responses = []
+        responsesNames = self.get_responseNames()
+        self.respGroups = self.mavReader.get_respGroups()
+        for x, name in enumerate(responsesNames):
+            responses.append(response())
+            responses[x].set_name(name)
+
+            for group in self.respGroups:
+                if name in self.respGroups[group].responses:
+                    responses[x].set_respGroup(self.respGroups[group])
+                    self.respGroups[group].append_responseIndex(x)
+                    print(name, "is in", group)
+
+    def print_respObjs(self):
+        responses = self.get_responseNames()
+        print("response groups")
+        for group in self.respGroups:
+            respNames = [responses[x] for x in group.append_responseIndexes]
+            print("names:", respNames)
+
+            print("group: ", group.group)
+            print("hue: ", group.hue)
+
+        os.system("pause")
+
+    def find_respMax(self, response):
+        max = 0
+        numCells = len(self.cellCenters)
+        timeSteps = len(self.timeSteps)
+
+        for sim in self.simList:
+
+            for cell in range(numCells):
+                for time in range(timeSteps):
+                    if sim.simGrid[time][cell] is None:
+                        print("simGrid", "time", time, "Cell", cell, "is None")
+                    else:
+                        data = sim.simGrid[time][cell].dataLine[response]
+                    if data is not None:
+                        if data > max:
+                            max = data
+        return max
 
 # end helper functions ********************************************************
 
 # start getter/setter methods *************************************************
-    def get_fig_ax(self):
-        return self.fig,self.ax
 
-    def get_simDataSet(self,simId):
-        return self.mavReader.get_simInst(simId)
+    def set_simInst(self, simInst):
+        self.simInst = simInst
 
     def get_timeSteps(self):
-        return self.mavReader.get_timesteps()
-    
-    def get_responses(self):
-        return self.mavReader.get_responses()
+
+        return self.timeSteps
+
+    def get_responseNames(self):
+        return self.reader.get_responses()[0]
 
     def get_timeParams(self):
-        timesteps=self.get_timeSteps()
-        increment=float(timesteps[1])-float(timesteps[0])
-        increment_fraction=Fraction(increment)
-        stepsPerday=increment_fraction.denominator
-        
-        rangeMin=min(timesteps)
-        rangeMax=max(timesteps) 
-        range=[rangeMin,rangeMax]
-        return range,stepsPerday
+        timesteps = self.get_timeSteps()
+        increment = float(timesteps[1])-float(timesteps[0])
+        increment_fraction = Fraction(increment)
+        stepsPerday = increment_fraction.denominator
+
+        rangeMin = min(timesteps)
+        rangeMax = max(timesteps)
+        range = [rangeMin, rangeMax]
+        return range, stepsPerday
+
+    def get_cellCenters(self):
+        return self.cellCenters
 
     def get_simIdList(self):
-        return self.mavReader.get_simIdList()
+        return self.reader.get_simIdList()
 
-    def set_currSim(self,simId):
+    def set_currSim(self, simId):
         for sim in self.simList:
             print(sim)
         for sim in self.simList:
-            if sim.simPrefix==simId:
-                self.currSim=sim
+            if sim.simPrefix == simId:
+                self.currSim = sim
                 print("setting sim to ", simId)
                 break
 
+    # takes vornonoi coords and determines min size of plot
     def get_vorPlotLim(self):
-        
-        coordsInv=zip(*self.vorCoords)
-        coordsInv=list(coordsInv)
+
+        coordsInv = zip(*self.vorCoords)
+        coordsInv = list(coordsInv)
         print(*coordsInv)
-        min_x=min(coordsInv[0])
-        max_x=max(coordsInv[0])
-        min_y=min(coordsInv[1])
-        max_y=max(coordsInv[1])
-        return [[min_x,max_x],[min_y,max_y]]
+        min_x = min(coordsInv[0])
+        max_x = max(coordsInv[0])
+        min_y = min(coordsInv[1])
+        max_y = max(coordsInv[1])
+        return [[min_x, max_x], [min_y, max_y]]
 
     def get_indepVars(self):
-        return self.mavReader.get_IndVars()
-#end getter/setter methods *****************************************************
+        return self.reader.get_IndVars()
+
+    def get_dataBySimTimeCellResp(self, simIndex, timeIndex, cell, response):
+        return self.simList[simIndex].simGrid[timeIndex][cell-1].dataLine[response]
+# end getter/setter methods *****************************************************
