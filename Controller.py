@@ -23,7 +23,10 @@ class Controller:
     # read in data and config widgets based on data
     def map_spinupDataSet(self, frames, mavFile):
 
-        self.mapModel.read_mav(mavFile)
+        self.mapModel.read_mav(mavFile)                                
+        self.mapModel.read_colorJson('colors.json')
+        self.mapModel.initialize_respObjs()
+        # self.mapModel.print_respObjs()
         cellCenters = self.mapModel.get_cellCenters()
         self.vorCells, boundCell = self.mapModel.create_cells(cellCenters, [])
         self.create_cellPatches(self.vorCells)
@@ -70,6 +73,7 @@ class Controller:
         if isinstance(frame, MapControlFrame):
             plotFrame = frame.get_master().get_mapFrame()
 
+        responses=self.mapModel.get_responses()
         simIndex = frame.get_simIdDropIndex()
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
         timeStep = frame.get_timeSliderVal()
@@ -78,13 +82,13 @@ class Controller:
         response = frame.get_respDropIndex()
 
         numCells = len(self.vorCells)
-        max = self.mapModel.find_respMax(response)
 
         for cell in range(numCells):
             data = self.mapModel.get_dataBySimTimeCellResp(
                 simIndex, timeIndex, cell+1, response)
             # generate color for a cell based on data
-            color = self.gen_colorLinear(data, max)
+            color = responses[response].gen_color(data)
+            # print("Color changed to", color)
             # update color on plot
             plotFrame.update_cellPatch(color, cell+1)
         plotFrame.draw_canvas()
@@ -92,11 +96,13 @@ class Controller:
     # create/update legend based on param values
     def update_legend(self, numThresh, frame):
         response = frame.get_respDropIndex()
-        max = self.mapModel.find_respMax(response)
+        responses=self.mapModel.get_responses()
+        respGroup=responses[response].get_respGroup()
+        max=respGroup.get_max()
         patches = []
         for x in range(numThresh):
             colorThresh = max/(x+1)
-            color = self.gen_colorLinear(colorThresh, max)
+            color = respGroup.gen_color(colorThresh)
             colorStr = str("{:.2f}".format(colorThresh))
             patches.append(Patch(facecolor=color, label=colorStr))
 

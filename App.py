@@ -1,3 +1,6 @@
+# Map Viewer
+# App.py
+# Main Appliction class
 import tkinter as tk
 from tkinter import ttk
 
@@ -8,7 +11,7 @@ from WindowManger import WindowManager
 
 def main():
     parent = tk.Tk()
-    parent.title("Impact Map Viewer 0.0.8")
+    parent.title("Impact Map Viewer 0.0.9")
     view = View()
     view.init_mainWindow(parent)
 

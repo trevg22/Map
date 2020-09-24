@@ -13,7 +13,7 @@ from shapely.ops import polygonize
 from CellHandler import CellHandler
 from data_reader import Reader
 from helpers import get_vorPolys
-from Response import Response
+from Response import Response, ResponseGroup
 
 
 class mapModel:
@@ -32,7 +32,10 @@ class mapModel:
         self.cellCenters = self.reader.get_cellCoords()
         self.timeSteps = self.reader.get_timesteps()
 
+    def read_colorJson(self, file):
+        self.reader.read_colorJson(file)
 # start cellpatch/polygon functions********************************************
+
     def create_cells(self, vorCoords, boundCoords):
         self.cells, boundCell = self.cellhandler.create_cellPolys(
             vorCoords, boundCoords)
@@ -86,28 +89,46 @@ class mapModel:
                 print("cell ", startCell+i, " ", value)
 
     def initialize_respObjs(self):
-        responses = []
+        default_hue = 197
         responsesNames = self.get_responseNames()
-        self.respGroups = self.mavReader.get_respGroups()
+        self.responses = []
+        self.respGroups = self.reader.get_respGroups()
         for x, name in enumerate(responsesNames):
-            responses.append(response())
-            responses[x].set_name(name)
+            found = False
+            self.responses.append(Response())
+            self.responses[x].set_name(name)
 
             for group in self.respGroups:
-                if name in self.respGroups[group].responses:
-                    responses[x].set_respGroup(self.respGroups[group])
-                    self.respGroups[group].append_responseIndex(x)
-                    print(name, "is in", group)
+                for resp in self.respGroups[group].get_responseNames():
+
+                    if resp in name:
+                        found = True
+                        self.responses[x].set_respGroup(self.respGroups[group])
+                        self.respGroups[group].append_responseIndex(x)
+            if found == False:
+                self.responses[x].set_respGroup(ResponseGroup())
+                self.responses[x].get_respGroup().append_responseIndex(x)
+                self.responses[x].get_respGroup().set_group(name)
+                self.responses[x].get_respGroup().set_hue(default_hue)
+                self.respGroups.update({self.responses[x].get_respGroup(
+                ).get_group(): self.responses[x].get_respGroup()})
+
+
+        for respGrp in self.respGroups.values():
+            respGrp.find_groupMax(self.simList)
+            print(respGrp.get_hue())
+            
 
     def print_respObjs(self):
         responses = self.get_responseNames()
         print("response groups")
-        for group in self.respGroups:
-            respNames = [responses[x] for x in group.append_responseIndexes]
-            print("names:", respNames)
-
+        for resp in self.responses:
+            group = resp.get_respGroup()
+            print("names:", group.get_responseNames())
+            print("indexes", group.get_responseIndexes())
             print("group: ", group.group)
             print("hue: ", group.hue)
+            print("\n")
 
         os.system("pause")
 
@@ -142,6 +163,9 @@ class mapModel:
 
     def get_responseNames(self):
         return self.reader.get_responses()[0]
+
+    def get_responses(self):
+        return self.responses
 
     def get_timeParams(self):
         timesteps = self.get_timeSteps()
@@ -183,6 +207,9 @@ class mapModel:
 
     def get_indepVars(self):
         return self.reader.get_IndVars()
+
+    def get_respGroups(self):
+        self.reader.get_respGroups()
 
     def get_dataBySimTimeCellResp(self, simIndex, timeIndex, cell, response):
         return self.simList[simIndex].simGrid[timeIndex][cell-1].dataLine[response]

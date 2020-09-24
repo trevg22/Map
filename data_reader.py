@@ -1,6 +1,6 @@
 import json
 import numpy as np
-import os
+from os import path
 from Response import Response, ResponseGroup
 # from collections import namedtuple
 # Stores list of responses at specific cell and time
@@ -82,19 +82,22 @@ class Reader:
     #         coords[x][1] = temp
     #         return coords
 
-    def readColorJson(self, file):
+    def read_colorJson(self, file):
         self.respGroups = {}
-        with open(file, 'r') as f:
-            data = json.load(f)
-            ###
-            # Add try/catch blocks
-            for respGroup in data["groups"]:
-                print(respGroup)
-                name = respGroup["name"]
-                self.respGroups[name] = responseGroup()
-                self.respGroups[name].set_responses(respGroup["responses"])
-                self.respGroups[name].set_hue(respGroup["hue"])
-                self.respGroups[name].set_type(respGroup["type"])
+        if path.exists:
+            with open(file, 'r') as f:
+                data = json.load(f)
+                ###
+                # Add try/catch blocks
+                for respGroup in data["groups"]:
+                    print(respGroup)
+                    name = respGroup["name"]
+                    self.respGroups[name] = ResponseGroup()
+                    self.respGroups[name].set_responses(respGroup["responses"])
+                    self.respGroups[name].set_hue(respGroup["hue"])
+                    self.respGroups[name].set_type(respGroup["type"])
+                    self.respGroups[name].set_group(respGroup['name'])
+                    print(self.respGroups[name].get_responseNames())
 
     def readMav_file(self, file):
         with open(file, 'r') as f:
@@ -121,8 +124,6 @@ class Reader:
         startIndex = numVars+2
         for dataLine in data["map-viewer"]["values"]:
 
-            if dataLine[0] == 2 and dataLine[1] == 0 and dataLine[2] == 0:
-                print("its happening")
             count = 0
             found = False
 

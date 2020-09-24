@@ -10,12 +10,18 @@ class Response:
     def __init__(self):
         self.name = ""
 
+    def gen_color(self,data):
+        return self.respGroup.gen_color(data)
     def set_respGroup(self, inc_respGroup):
         self.respGroup = inc_respGroup
 
     def set_name(self, inc_name):
         self.name = inc_name
 
+    def get_respGroup(self):
+        return self.respGroup
+
+    
 # a group of responses that need to be treated similarly
 
 
@@ -28,31 +34,47 @@ class ResponseGroup:
         self.responseNames = []
         self.max = 0
 
-    def find_max(self, currSim):
-
+    def find_groupMax(self,simList):
         for resp in self.responseIndexes:
-            for time in range(len(currSim.simGrid)):
-                for cell in range(len(currSim.simGrid[time])):
-                    value = currSim.simGrid[time][cell].dataLine[resp]
+            self.find_respMax(simList,resp)
 
-                    if value is not None and value > self.max:
-                        self.max = value
+    def find_respMax(self, simList,response):
 
-    def genColor_linear(self, respdata):
-        hueFrac = self.hue/360
+        for sim in simList:
+            for timeSlice in sim.simGrid:
+                for cell in timeSlice:
+                    if cell is None:
+                        print("simGrid is none")
+                    else:
+                        data = cell.dataLine[response]
+                    if data is not None:
+                        if data > self.max:
+                            self.max = data
+
+    def gen_color(self,data):
+        return self.gen_colorLinear(data)
+
+    def gen_colorLinear(self, data):
+        # Hue value from HSL color standard(0-360 degrees)
+        print("using hue:",self.hue)
+        hueFrac = self.hue/360  # normalize hue
         sat = 1  # represents 100 percent
         threshold = .90  # maximum light value to avoid moving to black
 
-        #print("Patch data for cell num",patch.cell," ", patch.data)
-        lightness = (1-(respdata/max)*threshold)
-        return colorsys.hls_to_rgb(hueFrac, lightness, sat)
+        if self.max > 0 and data is not None:
+            lightness = (1-(data/self.max)*threshold)
+            color = colorsys.hls_to_rgb(hueFrac, lightness, sat)
+        else:
+            color = [1, 0, 0]
+        return color
+    
 
     def genColor_log(self, respdata):
         pass
 
     def map_toColorFunc(self):
         if self.type == "linear" or self.type == "default":
-            self.colorFunc = self.genColor_linear
+            self.colorFunc = self.gen_colorLinear
         elif self.type == "log":
             self.colorFunc = self.genColor_log
         else:
@@ -69,10 +91,26 @@ class ResponseGroup:
         self.hue = inc_hue
 
     def set_responses(self, inc_responses):
-        self.responses = inc_responses
+        self.responseNames = inc_responses
 
     def set_max(self, inc_max):
         self.max = inc_max
 
     def append_responseIndex(self, inc_index):
         self.responseIndexes.append(inc_index)
+
+    def get_responseIndexes(self):
+        return self.responseIndexes
+
+    def get_responseNames(self):
+        return self.responseNames
+
+    def get_group(self):
+        return self.group
+
+    def get_max(self):
+        return self.max
+    
+    def get_hue(self):
+        return self.hue
+    
