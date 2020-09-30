@@ -27,8 +27,10 @@ class Controller:
         self.mapModel.read_colorJson('colors.json')
         self.mapModel.initialize_respObjs()
         # self.mapModel.print_respObjs()
-        cellCenters = self.mapModel.get_cellCenters()
-        self.vorCells, boundCell = self.mapModel.create_cells(cellCenters, [])
+        vorCenters=self.mapModel.get_cellCenters()
+        vorPolys,boundPoly=self.mapModel.create_vorPolys(vorCenters,[])
+        mercPolys=self.mapModel.convPolygs84_toMerc(vorPolys)
+        self.vorCells  = self.mapModel.create_cells(mercPolys, [])
         self.create_cellPatches(self.vorCells)
         self.config_widgets(frames)
 
@@ -63,7 +65,7 @@ class Controller:
 
     # config matplotlib fig/plot cellpatches
     def config_mapPlot(self, frame):
-        cellCenters = self.mapModel.get_cellCenters()
+        cellCenters = self.mapModel.get_cellCenters_merc()
         xrange, yrange = self.get_vorPlotLim(cellCenters)
         self.plot_cellPatches(frame)
         frame.set_plotLims(xrange, yrange)

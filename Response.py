@@ -56,7 +56,6 @@ class ResponseGroup:
 
     def gen_colorLinear(self, data):
         # Hue value from HSL color standard(0-360 degrees)
-        print("using hue:",self.hue)
         hueFrac = self.hue/360  # normalize hue
         sat = 1  # represents 100 percent
         threshold = .90  # maximum light value to avoid moving to black

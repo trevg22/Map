@@ -10,9 +10,9 @@ import shapely
 from shapely.geometry import Point
 from shapely.ops import polygonize
 
-from CellHandler import CellHandler
 from data_reader import Reader
-from helpers import get_vorPolys
+from helpers import convPolygs84_toMerc, get_vorPolys, wgs84_toMercator
+from Polymap import Cell
 from Response import Response, ResponseGroup
 
 
@@ -23,7 +23,7 @@ class mapModel:
         self.cellPatches = None
         self.debugcount = 0
         self.currSim = None
-        self.cellhandler = CellHandler()
+        
         self.reader = Reader()
 # start reader functions *********************************************************
 
@@ -36,11 +36,7 @@ class mapModel:
         self.reader.read_colorJson(file)
 # start cellpatch/polygon functions********************************************
 
-    def create_cells(self, vorCoords, boundCoords):
-        self.cells, boundCell = self.cellhandler.create_cellPolys(
-            vorCoords, boundCoords)
 
-        return self.cells, boundCell
 
 # end cellpatch/polygon functions**********************************************
 
@@ -48,9 +44,6 @@ class mapModel:
     def plot_mapBackground(self):
         pass
 
-    def plot_cellPatches(self):
-        for patch in self.cellPatches:
-            self.ax.add_patch(patch.polygonPatch)
 
     def create_legend(self):
         pass
@@ -79,6 +72,17 @@ class mapModel:
             currCell = 0
         return currCell, found
 
+    
+
+    def create_cells(self,polygons,boundPoly):
+        polyList = list(polygons)
+        cells = []
+        for index,poly in enumerate(polyList):
+            cells.append(Cell(poly))
+            cells[index].set_cell(index+1)
+        self.cells=cells
+        return cells
+
     def print_SimInst(self, timeSteps, startCell, endCell):
 
         for time in timeSteps:
@@ -88,6 +92,10 @@ class mapModel:
                     time*self.stepsPerday)][startCell+i].dataLine
                 print("cell ", startCell+i, " ", value)
 
+    def convert_wgs84ToMercator(self,coords):
+        newCoords=[wgs84_toMercator(coord[0],coord[1]) for coord in coords]
+
+        return newCoords
     def initialize_respObjs(self):
         default_hue = 197
         responsesNames = self.get_responseNames()
@@ -116,7 +124,6 @@ class mapModel:
 
         for respGrp in self.respGroups.values():
             respGrp.find_groupMax(self.simList)
-            print(respGrp.get_hue())
             
 
     def print_respObjs(self):
@@ -181,6 +188,9 @@ class mapModel:
     def get_cellCenters(self):
         return self.cellCenters
 
+    def get_cellCenters_merc(self):
+        return self.convert_wgs84ToMercator(self.cellCenters)
+
     def get_simIdList(self):
         return self.reader.get_simIdList()
 
@@ -213,4 +223,10 @@ class mapModel:
 
     def get_dataBySimTimeCellResp(self, simIndex, timeIndex, cell, response):
         return self.simList[simIndex].simGrid[timeIndex][cell-1].dataLine[response]
+
+    def create_vorPolys(self,vorPoints,boundPoints):
+        return get_vorPolys(vorPoints,boundPoints)
+
+    def convPolygs84_toMerc(self,polygons):
+        return convPolygs84_toMerc(polygons)
 # end getter/setter methods *****************************************************

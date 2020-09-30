@@ -84,7 +84,7 @@ class Reader:
 
     def read_colorJson(self, file):
         self.respGroups = {}
-        if path.exists:
+        if path.exists(file):
             with open(file, 'r') as f:
                 data = json.load(f)
                 ###

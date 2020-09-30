@@ -64,6 +64,14 @@ class CellPatch(Patch):
     def get_cellNum(self):
         return self.cellNum
 
+class GeoCellPatch(CellPatch):
+    def __init__(self,path,cellNum,**kwargs):
+        super().__init__(self,path,cellNum,**kwargs)
+        self.geoType=""
+    
+    def set_geoType(self,type):
+        self.geom_type=type
+
 # non matplotlib cell object used in model
 
 

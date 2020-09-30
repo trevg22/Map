@@ -12,7 +12,7 @@ import random
 from matplotlib.collections import LineCollection
 from descartes import PolygonPatch
 from helpers import get_vorPolys
-class netModel:
+class NetModel:
     
     def __init__(self):
         self.vorPoints=[]

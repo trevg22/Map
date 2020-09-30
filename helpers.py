@@ -2,7 +2,7 @@
 # helpers.py
 #contains helper functions not specific to a class
 import random
-
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 from descartes import PolygonPatch
@@ -114,3 +114,20 @@ def get_vorPolys(vorPoints, boundPoints):
         polygons.append(poly)
 
     return polygons, boundPoly
+
+def wgs84_toMercator(lon,lat):
+    x=lon
+    radLat=(lat/360)*2*math.pi
+    y=math.tan(radLat)
+
+    return (x,y)
+
+def wgs84_toMercater_poly(poly):
+    x,y=poly.exterior.coords.xy
+    coords=zip(x,y)
+    merc_coords=[wgs84_toMercator(coord[0],coord[1]) for coord in tuple(coords)]
+    return Polygon(merc_coords)
+
+def convPolygs84_toMerc(polygons):
+        
+    return [wgs84_toMercater_poly(poly) for poly in polygons]
