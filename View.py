@@ -11,6 +11,7 @@ from NetFrame import NetParentFrame,NetControlFrame,NetMapFrame
 from WindowManger import WindowManager
 from NetFrame import NetParentFrame
 from NetController import NetController
+from ColorFrame import ColorParentFrame
 # Main gui class that has controller member
 
 
@@ -40,6 +41,7 @@ class View:
         fileMenu.add_command(label='Spawn Map', command=self.spawn_map)
         fileMenu.add_command(label="Spawn Data Box",
                              command=self.spawn_dataBox)
+        fileMenu.add_command(label="Spawn Color",command=self.spawn_colorTool)
         fileMenu.add_command(label='Spawn Network', command=self.spawn_network)
         menuBar.add_cascade(label='File', menu=fileMenu)
         editMenu = tk.Menu(menuBar, tearoff=0)
@@ -77,6 +79,11 @@ class View:
                 mFrame.set_dataFrame(tFrame)
                 tFrame.set_parent(mFrame)
 
+    def spawn_colorTool(self):
+        cFrame=ColorParentFrame("Color",self)
+        self.rootWm.add_frame(cFrame)
+        self.frames.append(cFrame)
+        self.mapController.config_colorWidgets(cFrame)
     def spawn_network(self):
         nFrame=NetParentFrame("network",self)
         self.rootWm.add_frame(nFrame)
@@ -126,6 +133,7 @@ class View:
     def map_mouseClicked(self, frame, event):
         if isinstance(frame,MapPlotFrame):
             self.mapController.cell_selected(frame, event)
+            print("Mouse clicked")
 
         if isinstance(frame,NetMapFrame):
             self.netController.point_clicked(frame,event)
@@ -139,3 +147,50 @@ class View:
 
     def cell_changed(self, frame, cell):
         pass
+
+# save button was changed on color props
+    def responsePropsChanged(self,args,frame):
+        responses=self.mapController.responses
+        responseIndex=args["responseIndex"]
+
+        if "maxVal" in args:
+            responses[responseIndex].max=args["maxVal"]
+
+        if "minVal" in args:
+            responses[responseIndex].min=args["minVal"]
+
+        if "hue" in args:
+            responses[responseIndex].hue=args["hue"]
+
+        maxVal=responses[responseIndex].max
+        minVal=responses[responseIndex].min
+        hue=responses[responseIndex].hue
+        frame.update_entrys(minVal,maxVal,hue)
+        
+        for loopFrame in self.frames:
+            if isinstance(loopFrame,MapParentFrame):
+                controlFrame=loopFrame.get_controlFrame()
+                self.mapController.update_map(controlFrame)
+                
+        print("response things changed")
+
+
+    def colorResponseChanged(self,frame,event):
+        responses=self.mapController.responses
+        responseIndex=frame.get_respDropIndex()
+
+        maxVal=responses[responseIndex].max
+        minVal=responses[responseIndex].min
+        hue=responses[responseIndex].hue
+        frame.update_entrys(minVal,maxVal,hue)
+
+
+    def densityToggled(self,frame):
+        self.mapController.update_map(frame)
+        print("Toggled")
+
+    def scaleFacChanged(self,frame,event):
+        if isinstance(frame,MapControlFrame):
+            plotframe=frame.get_plotFrame()
+            cell=plotframe.get_currCell()
+            self.mapController.write_cellData(plotframe,cell)

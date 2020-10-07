@@ -3,15 +3,16 @@
 # Model class to process data and handle voronoi tesselation and cell data
 import colorsys
 import os
+import math
 from fractions import Fraction
 
 import matplotlib.pyplot as plt
 import shapely
-from shapely.geometry import Point
+from shapely.geometry import Point, Polygon
 from shapely.ops import polygonize
 
 from data_reader import Reader
-from helpers import convPolygs84_toMerc, get_vorPolys, wgs84_toMercator
+from helpers import convPolygs84_toMerc, get_vorPolys, wgs84_toMercator, wgs84_toMercater_coords, wgs84_toMercater_poly, get_area_wgs84
 from Polymap import Cell
 from Response import Response, ResponseGroup
 
@@ -23,7 +24,7 @@ class mapModel:
         self.cellPatches = None
         self.debugcount = 0
         self.currSim = None
-        
+
         self.reader = Reader()
 # start reader functions *********************************************************
 
@@ -31,19 +32,22 @@ class mapModel:
         self.simList = self.reader.readMav_file(file)
         self.cellCenters = self.reader.get_cellCoords()
         self.timeSteps = self.reader.get_timesteps()
+        self.pathCells = self.reader.get_pathCells()
 
     def read_colorJson(self, file):
         self.reader.read_colorJson(file)
-# start cellpatch/polygon functions********************************************
 
+
+# start cellpatch/polygon functions********************************************
 
 
 # end cellpatch/polygon functions**********************************************
 
 # start plotting funcionts ******************************************************
+
+
     def plot_mapBackground(self):
         pass
-
 
     def create_legend(self):
         pass
@@ -72,16 +76,56 @@ class mapModel:
             currCell = 0
         return currCell, found
 
-    
+    def create_cells(self):
+        pathCells = self.get_pathCells()
+        cellCenters = self.get_cellCenters()
+        vorCoords = list(cellCenters)
+        pathCells.reverse()
+        for index in pathCells:
+            vorCoords.pop(index-1)
 
-    def create_cells(self,polygons,boundPoly):
-        polyList = list(polygons)
-        cells = []
-        for index,poly in enumerate(polyList):
-            cells.append(Cell(poly))
+        cells = len(cellCenters)*[None]
+        polygons, boundPoly = get_vorPolys(vorCoords, [])
+        vorPolys = list(polygons)
+
+        for index in range(len(pathCells)):
+
+            dist = 2
+            lat = float(cellCenters[index][1])
+            lon = float(cellCenters[index][0])
+            p1 = Point(lon-dist/2, lat-dist/2)
+            p2 = Point(lon+dist/2, lat-dist/2)
+            p3 = Point(lon+dist/2, lat+dist/2)
+            p4 = Point(lon-dist/2, lat+dist/2)
+            poly = Polygon([p1, p2, p3, p4])
+            area=get_area_wgs84(poly)
+            mercPoly = wgs84_toMercater_poly(poly)
+            cells[index] = Cell(mercPoly)
+            cells[index].type = "Path"
             cells[index].set_cell(index+1)
+            cells[index].area=area
+
+        if True:
+            print("There should be", len(cellCenters), "polygons")
+            print("There are", len(pathCells), "path polygons")
+            print("There are", len(polygons), "vor Polys")
+
+        for index, cell in enumerate(cells):
+            if cell is None:
+                poly = vorPolys.pop(0)
+                mercPoly=wgs84_toMercater_poly(poly)
+                area = get_area_wgs84(poly)
+                cells[index] = Cell(mercPoly)
+                cells[index].type = "Grid"
+                cells[index].set_cell(index+1)
+                cells[index].area=area
         self.cells=cells
-        return cells
+
+    def remove_pathCoords(self, coords, pathCoords):
+        newList = list(coords)
+        for index in range(len(pathCoords)):
+            newList.pop(pathCoords[len(pathCoords)-index-1]-1)
+        return newList
 
     def print_SimInst(self, timeSteps, startCell, endCell):
 
@@ -92,39 +136,39 @@ class mapModel:
                     time*self.stepsPerday)][startCell+i].dataLine
                 print("cell ", startCell+i, " ", value)
 
-    def convert_wgs84ToMercator(self,coords):
-        newCoords=[wgs84_toMercator(coord[0],coord[1]) for coord in coords]
+    def convert_wgs84ToMercator(self, coords):
+        newCoords = [wgs84_toMercator(coord[0], coord[1]) for coord in coords]
 
         return newCoords
-    def initialize_respObjs(self):
-        default_hue = 197
-        responsesNames = self.get_responseNames()
-        self.responses = []
-        self.respGroups = self.reader.get_respGroups()
-        for x, name in enumerate(responsesNames):
-            found = False
-            self.responses.append(Response())
-            self.responses[x].set_name(name)
 
-            for group in self.respGroups:
-                for resp in self.respGroups[group].get_responseNames():
+    
+    # def initialize_respObjs(self):
+    #     default_hue = 197
+    #     responsesNames = self.get_responseNames()
+    #     self.responses = []
+    #     self.respGroups = self.reader.get_respGroups()
+    #     for x, name in enumerate(responsesNames):
+    #         found = False
+    #         self.responses.append(Response())
+    #         self.responses[x].set_name(name)
 
-                    if resp in name:
-                        found = True
-                        self.responses[x].set_respGroup(self.respGroups[group])
-                        self.respGroups[group].append_responseIndex(x)
-            if found == False:
-                self.responses[x].set_respGroup(ResponseGroup())
-                self.responses[x].get_respGroup().append_responseIndex(x)
-                self.responses[x].get_respGroup().set_group(name)
-                self.responses[x].get_respGroup().set_hue(default_hue)
-                self.respGroups.update({self.responses[x].get_respGroup(
-                ).get_group(): self.responses[x].get_respGroup()})
+    #         for group in self.respGroups:
+    #             for resp in self.respGroups[group].get_responseNames():
 
+    #                 if resp in name:
+    #                     found = True
+    #                     self.responses[x].set_respGroup(self.respGroups[group])
+    #                     self.respGroups[group].append_responseIndex(x)
+    #         if found == False:
+    #             self.responses[x].set_respGroup(ResponseGroup())
+    #             self.responses[x].get_respGroup().append_responseIndex(x)
+    #             self.responses[x].get_respGroup().set_group(name)
+    #             self.responses[x].get_respGroup().set_hue(default_hue)
+    #             self.respGroups.update({self.responses[x].get_respGroup(
+    #             ).get_group(): self.responses[x].get_respGroup()})
 
-        for respGrp in self.respGroups.values():
-            respGrp.find_groupMax(self.simList)
-            
+    #     for respGrp in self.respGroups.values():
+    #         respGrp.find_groupMax(self.simList)
 
     def print_respObjs(self):
         responses = self.get_responseNames()
@@ -157,6 +201,22 @@ class mapModel:
                             max = data
         return max
 
+    def find_normalizedMax(self,response):
+        max=0
+        numCells=len(self.cells)
+        timeSteps = len(self.timeSteps)
+        for sim in self.simList:
+
+            for cell in range(numCells):
+                for time in range(timeSteps):
+                    if sim.simGrid[time][cell] is None:
+                        print("simGrid", "time", time, "Cell", cell, "is None")
+                    else:
+                        data = sim.simGrid[time][cell].dataLine[response]/self.cells[cell].area
+                    if data is not None:
+                        if data > max:
+                            max = data
+        return max
 # end helper functions ********************************************************
 
 # start getter/setter methods *************************************************
@@ -215,6 +275,8 @@ class mapModel:
         max_y = max(coordsInv[1])
         return [[min_x, max_x], [min_y, max_y]]
 
+    def get_simList(self):
+        return self.simList
     def get_indepVars(self):
         return self.reader.get_IndVars()
 
@@ -224,9 +286,20 @@ class mapModel:
     def get_dataBySimTimeCellResp(self, simIndex, timeIndex, cell, response):
         return self.simList[simIndex].simGrid[timeIndex][cell-1].dataLine[response]
 
-    def create_vorPolys(self,vorPoints,boundPoints):
-        return get_vorPolys(vorPoints,boundPoints)
+    def get_pathCells(self):
+        return self.pathCells
 
-    def convPolygs84_toMerc(self,polygons):
+    def get_vorCells(self):
+        return self.cells
+
+    def create_vorPolys(self, vorPoints, boundPoints):
+        return get_vorPolys(vorPoints, boundPoints)
+
+    def convPolygs84_toMerc(self, polygons):
         return convPolygs84_toMerc(polygons)
+
+    def convCoords84_toMerc(self, coords):
+        return wgs84_toMercater_coords(coords)
+
+
 # end getter/setter methods *****************************************************

@@ -11,6 +11,10 @@ from data_reader import Reader
 from mapFrame import MapControlFrame, MapParentFrame, MapPlotFrame
 from mapModel import mapModel
 from Polymap import CellPatch, PolygonPath
+from ColorFrame import ColorParentFrame
+
+
+from Response import Response
 
 
 class Controller:
@@ -22,16 +26,12 @@ class Controller:
 
     # read in data and config widgets based on data
     def map_spinupDataSet(self, frames, mavFile):
-
-        self.mapModel.read_mav(mavFile)                                
+        self.mapModel.read_mav(mavFile)
         self.mapModel.read_colorJson('colors.json')
-        self.mapModel.initialize_respObjs()
-        # self.mapModel.print_respObjs()
-        vorCenters=self.mapModel.get_cellCenters()
-        vorPolys,boundPoly=self.mapModel.create_vorPolys(vorCenters,[])
-        mercPolys=self.mapModel.convPolygs84_toMerc(vorPolys)
-        self.vorCells  = self.mapModel.create_cells(mercPolys, [])
-        self.create_cellPatches(self.vorCells)
+        self.initialize_respObjs()
+        self.mapModel.create_cells()
+        vorCells = self.mapModel.get_vorCells()
+        self.create_cellPatches(vorCells)
         self.config_widgets(frames)
 
     # creat cellPatches from voronoi polygons
@@ -39,7 +39,7 @@ class Controller:
         cellPatches = []
         for cell in vorCells:
             path = PolygonPath(cell.polygon)
-            cellPatch = CellPatch(path, cell.get_cellNum(), picker=True)
+            cellPatch = CellPatch(path, cell, picker=True)
             cellPatches.append(cellPatch)
         return cellPatches
 
@@ -50,6 +50,20 @@ class Controller:
                 self.config_mapPlot(frame)
                 self.config_mapWidgets(frame.controlFrame)
 
+            if isinstance(frame, ColorParentFrame):
+                self.config_colorWidgets(frame)
+
+    def config_colorWidgets(self, frame):
+        responsesNames = self.mapModel.get_responseNames()
+        responses = self.responses
+        frame.config_respDrop(values=responsesNames)
+        frame.set_respDropIndex(responsesNames[0])
+        minVal = responses[0].min
+        maxVal = responses[0].max
+        hue = responses[0].hue
+        frame.update_entrys(minVal, maxVal, hue)
+        print("configuring colors")
+
     # config map widgets sliders/dropdowns
     def config_mapWidgets(self, frame):
         simIds = self.mapModel.get_simIdList()
@@ -58,6 +72,9 @@ class Controller:
         timeSliderRes = 1/stepsPerDay
         frame.config_timeSlider(resolution=timeSliderRes, from_=timeRange[0],
                                 to=timeRange[1], digits=4)
+        frame.config_timeSpin(increment=timeSliderRes,
+                              from_=timeRange[0], to=timeRange[1], format="%5.2f",width=7)
+        
         frame.config_respDrop(values=responses)
         frame.config_simIdDrop(values=simIds)
         frame.set_simIdDropIndex(simIds[0])
@@ -75,36 +92,42 @@ class Controller:
         if isinstance(frame, MapControlFrame):
             plotFrame = frame.get_master().get_mapFrame()
 
-        responses=self.mapModel.get_responses()
+        vorCells = self.mapModel.get_vorCells()
+        responses = self.responses
         simIndex = frame.get_simIdDropIndex()
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
         timeStep = frame.get_timeSliderVal()
-
+        densityOn = frame.get_densityToggle()
         timeIndex = round(timeStep*stepsPerDay)
         response = frame.get_respDropIndex()
+        numCells = len(vorCells)
 
-        numCells = len(self.vorCells)
+        if densityOn:
+            densityMax = self.mapModel.find_normalizedMax(response)
 
         for cell in range(numCells):
             data = self.mapModel.get_dataBySimTimeCellResp(
                 simIndex, timeIndex, cell+1, response)
-            # generate color for a cell based on data
-            color = responses[response].gen_color(data)
-            # print("Color changed to", color)
+            if densityOn:
+                area = vorCells[cell].area
+                color = responses[response].gen_colorNorm(
+                    data, densityMax, area)
+            else:
+                color = responses[response].gen_color(data)
             # update color on plot
             plotFrame.update_cellPatch(color, cell+1)
         plotFrame.draw_canvas()
 
     # create/update legend based on param values
     def update_legend(self, numThresh, frame):
-        response = frame.get_respDropIndex()
-        responses=self.mapModel.get_responses()
-        respGroup=responses[response].get_respGroup()
-        max=respGroup.get_max()
+        responseIndex = frame.get_respDropIndex()
+        responses = self.responses
+        response = responses[responseIndex]
+        max = response.max
         patches = []
         for x in range(numThresh):
             colorThresh = max/(x+1)
-            color = respGroup.gen_color(colorThresh)
+            color = response.gen_color(colorThresh)
             colorStr = str("{:.2f}".format(colorThresh))
             patches.append(Patch(facecolor=color, label=colorStr))
 
@@ -162,12 +185,12 @@ class Controller:
         artist.set_linewidth(3.0)
 
         self.selected_cell = artist
-        frame.set_currCell(artist.get_cellNum())
+        frame.set_currCell(artist)
 
         if frame.get_dataFrame() is not None:
-            self.write_cellData(frame, artist.get_cellNum())
+            self.write_cellData(frame, artist)
         frame.draw_canvas()
-
+        print("cell selected")
     # write data box if cell is selected
     def write_cellData(self, frame, cell):
 
@@ -181,19 +204,38 @@ class Controller:
 
         timeIndex = round(timeStep*stepsPerDay)
         #response = controlFrame.get_respDropDownIndex()
-
+        vorCells = self.mapModel.get_vorCells()
+        densityOn = controlFrame.get_densityToggle()
+        scaleFac = controlFrame.get_densityScaleFac()
         dataFrame = frame.get_dataFrame()
         dataFrame.clear()
         for index, response in enumerate(responses):
             data = self.mapModel.get_dataBySimTimeCellResp(
-                simIndex, timeIndex, cell, index)
-            dataLine = response+": "+str(data)+"\n"
+                simIndex, timeIndex, cell.get_cellNum(), index)
+            if densityOn:
+                data = data/scaleFac
+            dataLine = response+": "+"{0:.2f}".format(data)+"\n"
             dataFrame.write_line(dataLine)
         dataFrame.view_currLine()
-        dataFrame.write_selectedLabel("Selected Cell " + str(cell))
+        dataFrame.write_selectedLabel(cell)
+
+    def initialize_respObjs(self):
+        default_hue = 132
+        responsesNames = self.get_reponseNames()
+        simList = self.mapModel.get_simList()
+        self.responses = []
+
+        for index, name in enumerate(responsesNames):
+            resp = Response()
+            resp.find_respMax(simList, index)
+            resp.find_respMin(simList, index)
+            resp.hue = default_hue
+            resp.type = "linear"
+            self.responses.append(resp)
 
     def plot_cellPatches(self, frame):
-        frame.plot_cellPatches(self.create_cellPatches(self.vorCells))
+        vorCells = self.mapModel.get_vorCells()
+        frame.plot_cellPatches(self.create_cellPatches(vorCells))
 
     def get_vorPlotLim(self, cellCenters):
 
@@ -204,3 +246,6 @@ class Controller:
         min_y = min(coordsInv[1])
         max_y = max(coordsInv[1])
         return [[min_x, max_x], [min_y, max_y]]
+
+    def get_reponseNames(self):
+        return self.mapModel.get_responseNames()

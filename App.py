@@ -11,7 +11,7 @@ from WindowManger import WindowManager
 
 def main():
     parent = tk.Tk()
-    parent.title("Impact Map Viewer 0.0.9")
+    parent.title("Impact Map Viewer 0.0.11")
     view = View()
     view.init_mainWindow(parent)
 

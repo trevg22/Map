@@ -9,9 +9,77 @@ class Response:
 
     def __init__(self):
         self.name = ""
+        self.min=None
+        self.max=0
+        self.hue=None
+        self.type=None
+        
+
+    def find_respMax(self, simList,response):
+
+        for sim in simList:
+            for timeSlice in sim.simGrid:
+                for cell in timeSlice:
+                    if cell is None:
+                        print("simGrid is none")
+                    else:
+                        data = cell.dataLine[response]
+                    if data is not None:
+                        if data > self.max:
+                            self.max = data
+        self.min=self.max
+
+    def find_respMin(self, simList,response):
+
+        for sim in simList:
+            for timeSlice in sim.simGrid:
+                for cell in timeSlice:
+                    if cell is None:
+                        print("simGrid is none")
+                    else:
+                        data = cell.dataLine[response]
+                    if data is not None:
+                        if data < self.min:
+                            self.min = data
+
+
+    def gen_colorLinear(self, data):
+        # Hue value from HSL color standard(0-360 degrees)
+        hueFrac = self.hue/360  # normalize hue
+        sat = 1  # represents 100 percent
+        threshold = .70  # maximum light value to avoid moving to black
+        
+        if self.max > 0 and data is not None:
+            # lightness = (1-(data/self.max)*threshold)
+            if data >= self.min or data <=self.max:
+                lightness=1-((data-self.min)/self.max)*threshold
+                color = colorsys.hls_to_rgb(hueFrac, lightness, sat)
+            elif data <=self.min:
+                color=[1,1,1]
+            elif data >=self.max:
+                color=colorsys.hls_to_rgb(hueFrac,threshold,sat)
+        else:
+            color = [1, 0, 0]
+        return color
+
+    def gen_colorNorm(self,data,max,area):
+        hueFrac = self.hue/360  # normalize hue
+        sat = 1  # represents 100 percent
+        threshold = .70  # maximum light value to avoid moving to black
+        if self.max > 0 and data is not None:
+            # lightness = (1-(data/self.max)*threshold)
+            data=data/area
+            lightness=1-(data/max)*threshold
+            color = colorsys.hls_to_rgb(hueFrac, lightness, sat)
+        else:
+            color = [1, 0, 0]
+        return color
+ 
 
     def gen_color(self,data):
-        return self.respGroup.gen_color(data)
+        if self.type=="linear":
+            return self.gen_colorLinear(data)
+
     def set_respGroup(self, inc_respGroup):
         self.respGroup = inc_respGroup
 
@@ -50,6 +118,20 @@ class ResponseGroup:
                     if data is not None:
                         if data > self.max:
                             self.max = data
+        self.min=self.max
+
+    def find_respMin(self, simList,response):
+
+        for sim in simList:
+            for timeSlice in sim.simGrid:
+                for cell in timeSlice:
+                    if cell is None:
+                        print("simGrid is none")
+                    else:
+                        data = cell.dataLine[response]
+                    if data is not None:
+                        if data < self.min:
+                            self.min = data
 
     def gen_color(self,data):
         return self.gen_colorLinear(data)
@@ -58,7 +140,7 @@ class ResponseGroup:
         # Hue value from HSL color standard(0-360 degrees)
         hueFrac = self.hue/360  # normalize hue
         sat = 1  # represents 100 percent
-        threshold = .90  # maximum light value to avoid moving to black
+        threshold = .70  # maximum light value to avoid moving to black
 
         if self.max > 0 and data is not None:
             lightness = (1-(data/self.max)*threshold)

@@ -68,9 +68,13 @@ class MapControlFrame(Frame):
             self.frame = ttk.Frame()
 
         if default == True:
+            self.checkVar=tk.IntVar()
             self.respDropDown = ttk.Combobox(self)
-            self.simIdDropDown = ttk.Combobox(self)
-            self.timeSlider = tk.Scale(self, orient=tk.HORIZONTAL)
+            self.simIdDropDown = ttk.Combobox(self,width=3)
+            self.timeSlider = tk.Scale(self, orient=tk.HORIZONTAL,showvalue=0)
+            self.scaleFacDrop=ttk.Combobox(self)
+            self.toggleDensityCheck=ttk.Checkbutton(self,text="Toggle Density",var=self.checkVar)
+            self.timeSpin=ttk.Spinbox(self)
             self.config_widgetDefaults()
             self.pack()
         else:
@@ -81,17 +85,48 @@ class MapControlFrame(Frame):
     # Bind widget events to View functions
     def config_widgetDefaults(self):
         self.timeSlider.bind(
-            "<ButtonRelease-1>", lambda event: self.view.map_timeSliderReleased(self, event))
+            "<ButtonRelease-1>", lambda event: self.timeSliderChanged(event))
         self.simIdDropDown.bind(
             "<<ComboboxSelected>>", lambda event: self.view.map_simIdDropdownChanged(self, event))
         self.respDropDown.bind(
             "<<ComboboxSelected>>", lambda event: self.view.map_responseDropDownChanged(self, event))
+        
+        self.toggleDensityCheck.config(command=lambda:self.view.densityToggled(self))
+        self.scaleFacDrop.bind("<<ComboboxSelected>>",lambda event:self.view.scaleFacChanged(self,event))
+        self.timeSpin.config(command=self.timeSpinChanged)
+        self.timeSpin.set('0.00')
+        scaleFactors=[10,100,1000,10000]
+        self.scaleFacDrop.config(values=scaleFactors)
+        self.scaleFacDrop.set(scaleFactors[0])
 
     def pack(self):
-        self.simIdDropDown.grid(row=0, column=0)
-        self.timeSlider.grid(row=0, column=1)
-        self.respDropDown.grid(row=0, column=2)
+        idLabel=ttk.Label(self,text="Run")
+        timeLabel=ttk.Label(self,text="Time")
+        respLabel=ttk.Label(self,text="Response")
+        scaleFacLabel=ttk.Label(self,text="Scale Factor")
+        idLabel.grid(row=0,column=0)
+        self.simIdDropDown.grid(row=1, column=0)
+        timeLabel.grid(row=0,column=2)   
+        self.timeSlider.grid(row=1, column=2)
+        respLabel.grid(row=0,column=3)
+        self.respDropDown.grid(row=1, column=3)
+        scaleFacLabel.grid(row=0,column=4)
+        self.scaleFacDrop.grid(row=1,column=4)
+        
+        self.toggleDensityCheck.grid(row=1,column=5)
+        self.timeSpin.grid(row=1,column=1)
+
         self.grid(row=1, column=0)
+
+    def timeSpinChanged(self):
+        value=self.timeSpin.get()
+        self.timeSlider.set(value)
+        self.view.map_timeSliderReleased(self,None)
+
+    def timeSliderChanged(self,event):
+        value=self.timeSlider.get()
+        self.timeSpin.set(value)
+        self.view.map_timeSliderReleased(self,event)
 
     def set_master(self, inc_frame):
         self.master = inc_frame
@@ -120,6 +155,9 @@ class MapControlFrame(Frame):
     def config_respDrop(self, *arg, **kwargs):
         self.respDropDown.config(*arg, **kwargs)
 
+    def config_timeSpin(self,*arg,**kwargs):
+        self.timeSpin.config(*arg,**kwargs)
+
     def set_timeSliderIndex(self, index):
         self.timeSlider.set(index)
 
@@ -138,6 +176,11 @@ class MapControlFrame(Frame):
     def get_plotFrame(self):
         return self.plotFrame
 
+    def get_densityToggle(self):
+        return int(self.checkVar.get())
+
+    def get_densityScaleFac(self):
+        return int(self.scaleFacDrop.get())
 # Frame to hold map plot
 # May contain reference to dataFrame
 
@@ -208,8 +251,8 @@ class MapPlotFrame(Frame):
         self.ax.legend(handles=handles, loc='upper left')
         self.draw_canvas()
 
-    def get_currCell(self, cellNum):
-        self.currCell = cellNum
+    def get_currCell(self):
+        return self.currCell
 
     def get_hoverCell(self):
 
@@ -284,7 +327,14 @@ class TextFrame(LabelFrame):
         self.hovLabel.config(text="Hover Cell:"+str(line))
 
     # Write cell number that is selected
-    def write_selectedLabel(self, text):
+    def write_selectedLabel(self, cell):
+        area = cell.get_cellArea()
+        ctype = cell.get_cellType()
+        cellNum = cell.get_cellNum()
+        text = "Selected Cell: " + \
+            str(cellNum)+"\n Type: " + str(ctype) + \
+            "\n Area " + "{0:.2f}".format(area)+" km^2"
+
         self.selLabel.config(text=text)
 
     def set_parent(self, parent):

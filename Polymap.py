@@ -47,7 +47,7 @@ class CellPatch(Patch):
         s = "PathPatch%d((%g, %g) ...)"
         return s % (len(self._path.vertices), *tuple(self._path.vertices[0]))
 
-    def __init__(self, path, cellNum, **kwargs):
+    def __init__(self, path, cell, **kwargs):
         """
         *path* is a :class:`matplotlib.path.Path` object.
 
@@ -56,13 +56,20 @@ class CellPatch(Patch):
         """
         Patch.__init__(self, **kwargs)
         self._path = path
-        self.cellNum = cellNum
+        self.cell = cell
 
     def get_path(self):
         return self._path
 
     def get_cellNum(self):
-        return self.cellNum
+        return self.cell.get_cellNum()
+
+    def get_cellArea(self):
+        return self.cell.get_cellArea() 
+
+    def get_cellType(self):
+        return self.cell.type
+
 
 class GeoCellPatch(CellPatch):
     def __init__(self,path,cellNum,**kwargs):
@@ -81,6 +88,8 @@ class Cell:
         self.cell = None
         self.alpha = None
         self.polygon = inc_poly
+        self.type=None
+        self.area=None
 
     def set_alpha(self, inc_alpha):
         self.alpha = inc_alpha
@@ -99,3 +108,6 @@ class Cell:
 
     def get_polygon(self):
         return self.polygon
+
+    def get_cellArea(self):
+        return self.area

@@ -122,6 +122,10 @@ def wgs84_toMercator(lon,lat):
 
     return (x,y)
 
+def wgs84_toMercater_coords(coords):
+
+    return [wgs84_toMercator(coord[0],coord[1]) for coord in coords]
+
 def wgs84_toMercater_poly(poly):
     x,y=poly.exterior.coords.xy
     coords=zip(x,y)
@@ -131,3 +135,25 @@ def wgs84_toMercater_poly(poly):
 def convPolygs84_toMerc(polygons):
         
     return [wgs84_toMercater_poly(poly) for poly in polygons]
+
+def wgs84_toCart_coords(lon,lat):
+        r=6371 #km
+        c=2*math.pi*r
+        x = lon*c/360
+        y=lat*c/180
+        return(x,y)
+
+def wgs84_toCartesion_poly(poly):
+
+    x,y=poly.exterior.coords.xy
+    coords=zip(x,y)
+    cart_coords=[wgs84_toCart_coords(coord[0],coord[1]) for coord in tuple(coords)]
+    return Polygon(cart_coords)
+
+
+def convPolygons84_toCart(polygons):
+    return [wgs84_toCartesion_poly(poly) for poly in polygons]
+
+def get_area_wgs84(poly):
+    areaPoly=wgs84_toCartesion_poly(poly)
+    return areaPoly.area # area in km^2

@@ -71,17 +71,6 @@ class simInst():
 
 class Reader:
 
-    # def readCoordJson(self,file):
-    #     with open(file, 'r') as f:
-    #         data = json.load(f)
-    #         coords = np.array(list(data.values()), dtype=np.float32)
-
-    #     for x in range(len(coords)):
-    #         temp = coords[x][0]
-    #         coords[x][0] = coords[x][1]
-    #         coords[x][1] = temp
-    #         return coords
-
     def read_colorJson(self, file):
         self.respGroups = {}
         if path.exists(file):
@@ -99,6 +88,7 @@ class Reader:
                     self.respGroups[name].set_group(respGroup['name'])
                     print(self.respGroups[name].get_responseNames())
 
+        
     def readMav_file(self, file):
         with open(file, 'r') as f:
             data = json.load(f)
@@ -107,9 +97,12 @@ class Reader:
         self.simList = []
         self.timeSteps = data["map-viewer"]["variables"]["Time"]
         self.coords = data["map-viewer"]["variables"]["Cells"]
-        self.numCells = len(self.coords)
+        self.pathCells=data["map-viewer"]["variables"]["PathCells"]
+        self.pathCells=[int(cell) for cell in self.pathCells]
+        self.pathCells.sort()
+        self.numCells=len(self.coords)
         # subtract 1 because time,cells is not part of "sim id"
-        numVars = len(data["map-viewer"]["variables"]) - 2
+        numVars = len(data["map-viewer"]["variables"]) - 3
         print("numVars", numVars)
         self.names = list(data["map-viewer"]["variables"].keys())[:numVars]
         print(self.names)
@@ -212,6 +205,8 @@ class Reader:
         vorCoords = [[coord[1], coord[0]] for coord in self.coords]
         return vorCoords
 
+    def get_pathCells(self):
+        return self.pathCells
     def get_IndVars(self):
         self.indVars = []
         if len(self.names) == len(self.labels):
@@ -225,3 +220,5 @@ class Reader:
 
     def get_respGroups(self):
         return self.respGroups
+
+

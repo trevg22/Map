@@ -16,12 +16,16 @@ class WindowManager:
         self.parentFrame.columnconfigure(0, weight=1)
 
     # Add frame to the windowmanager and grid
-    def add_frame(self, frame):
+    def add_frame(self, frame,mode=None):
 
-        wmFrame = ttk.Frame(self.parentFrame)
-        wmFrame.rowconfigure(0, weight=1)
-        wmFrame.columnconfigure(0, weight=1)
-        # Add 'x' button to outer frame owned by manager
+        if mode is None or mode is "grid":
+            wmFrame = ttk.Frame(self.parentFrame)
+            wmFrame.rowconfigure(0, weight=1)
+            wmFrame.columnconfigure(0, weight=1)
+
+        elif mode is "floating":
+            wmFrame=tk.Toplevel(self.parentFrame)
+            # Add 'x' button to outer frame owned by manager
         button = ttk.Button(wmFrame, text='x', width=3,
                             command=lambda: self.delete_frame(wmFrame))
         self.frameList.append(wmFrame)
