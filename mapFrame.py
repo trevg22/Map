@@ -95,8 +95,11 @@ class MapControlFrame(Frame):
         self.scaleFacDrop.bind("<<ComboboxSelected>>",lambda event:self.view.scaleFacChanged(self,event))
         self.timeSpin.config(command=self.timeSpinChanged)
         self.timeSpin.set('0.00')
-        scaleFactors=[10,100,1000,10000]
-        self.scaleFacDrop.config(values=scaleFactors)
+        scaleFactors=[10,100,1000,10000,100000]
+        scaleFactors.sort()
+        factorPad=len(str(scaleFactors[-1]))
+
+        self.scaleFacDrop.config(values=scaleFactors,width=factorPad)
         self.scaleFacDrop.set(scaleFactors[0])
 
     def pack(self):
@@ -217,8 +220,10 @@ class MapPlotFrame(Frame):
 
     def plot_cellPatches(self, cellPatches):
         self.cellPatches = cellPatches
-        for patch in cellPatches:
+        for index,patch in enumerate(cellPatches):
             patch.set_facecolor([1, 1, 1])
+            # if index ==14:
+            #     self.ax.add_patch(patch)
             self.ax.add_patch(patch)
         self.canvas.draw()
 

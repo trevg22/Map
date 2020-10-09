@@ -12,8 +12,8 @@ from mapFrame import MapControlFrame, MapParentFrame, MapPlotFrame
 from mapModel import mapModel
 from Polymap import CellPatch, PolygonPath
 from ColorFrame import ColorParentFrame
-
-
+from tkinter import font
+import tkinter as tk
 from Response import Response
 
 
@@ -116,6 +116,7 @@ class Controller:
                 color = responses[response].gen_color(data)
             # update color on plot
             plotFrame.update_cellPatch(color, cell+1)
+                
         plotFrame.draw_canvas()
 
     # create/update legend based on param values
@@ -175,7 +176,7 @@ class Controller:
             else:
                 pass
                 # return -1
-                print("same cell")
+                # print("same cell")
 
     # if cell is selected highlight cell and write databox
     def cell_selected(self, frame, event):
@@ -197,25 +198,37 @@ class Controller:
         responses = self.mapModel.get_responseNames()
         if isinstance(frame, MapPlotFrame):
             controlFrame = frame.get_controlFrame()
-
+        currResponse=controlFrame.get_respDropIndex()
+        dataFrame = frame.get_dataFrame()
+        textwidget=dataFrame.textBox
+        bFont=font.Font(textwidget,textwidget.cget("font"))
+        bFont.config(weight="bold")
+        nFont=font.Font(textwidget,textwidget.cget("font"))
+        textwidget.tag_configure("bold",font=bFont)
         simIndex = controlFrame.get_simIdDropIndex()
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
         timeStep = controlFrame.get_timeSliderVal()
-
+        
         timeIndex = round(timeStep*stepsPerDay)
         #response = controlFrame.get_respDropDownIndex()
         vorCells = self.mapModel.get_vorCells()
         densityOn = controlFrame.get_densityToggle()
         scaleFac = controlFrame.get_densityScaleFac()
-        dataFrame = frame.get_dataFrame()
+        cellNum=cell.get_cellNum()
         dataFrame.clear()
         for index, response in enumerate(responses):
             data = self.mapModel.get_dataBySimTimeCellResp(
-                simIndex, timeIndex, cell.get_cellNum(), index)
+                simIndex, timeIndex, cellNum, index)
             if densityOn:
-                data = data/scaleFac
+                area=vorCells[cellNum-1].area
+                data = (data*scaleFac)/area
             dataLine = response+": "+"{0:.2f}".format(data)+"\n"
-            dataFrame.write_line(dataLine)
+            # if index==currResponse:
+            #     print("should be bold")
+            #     textwidget.config(font=bFont)
+            # else:
+            #     textwidget.config(font=nFont)
+            textwidget.insert(tk.END,dataLine)
         dataFrame.view_currLine()
         dataFrame.write_selectedLabel(cell)
 

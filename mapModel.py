@@ -78,21 +78,23 @@ class mapModel:
 
     def create_cells(self):
         pathCells = self.get_pathCells()
-        cellCenters = self.get_cellCenters()
-        vorCoords = list(cellCenters)
         pathCells.reverse()
+        cellCenters = self.get_cellCenters()
+        coords = list(cellCenters)
+        vorCoords=list(coords)
         for index in pathCells:
-            vorCoords.pop(index-1)
+            del vorCoords[index-1]
+
+            
 
         cells = len(cellCenters)*[None]
         polygons, boundPoly = get_vorPolys(vorCoords, [])
         vorPolys = list(polygons)
-
         for index in range(len(pathCells)):
-
+            cellIndex=pathCells[index]-1
             dist = 2
-            lat = float(cellCenters[index][1])
-            lon = float(cellCenters[index][0])
+            lat = float(cellCenters[cellIndex][1])
+            lon = float(cellCenters[cellIndex][0])
             p1 = Point(lon-dist/2, lat-dist/2)
             p2 = Point(lon+dist/2, lat-dist/2)
             p3 = Point(lon+dist/2, lat+dist/2)
@@ -100,15 +102,11 @@ class mapModel:
             poly = Polygon([p1, p2, p3, p4])
             area=get_area_wgs84(poly)
             mercPoly = wgs84_toMercater_poly(poly)
-            cells[index] = Cell(mercPoly)
-            cells[index].type = "Path"
-            cells[index].set_cell(index+1)
-            cells[index].area=area
+            cells[cellIndex] = Cell(mercPoly)
+            cells[cellIndex].type = "Path"
+            cells[cellIndex].set_cell(cellIndex+1)
+            cells[cellIndex].area=area
 
-        if True:
-            print("There should be", len(cellCenters), "polygons")
-            print("There are", len(pathCells), "path polygons")
-            print("There are", len(polygons), "vor Polys")
 
         for index, cell in enumerate(cells):
             if cell is None:
@@ -120,7 +118,10 @@ class mapModel:
                 cells[index].set_cell(index+1)
                 cells[index].area=area
         self.cells=cells
-
+        if True:
+            print("There should be", len(cellCenters), "polygons")
+            print("There are", len(pathCells), "path polygons")
+            print("There are", len(polygons), "vor Polys")   print("Cell number",cell.cell,"is type",cell.type) 
     def remove_pathCoords(self, coords, pathCoords):
         newList = list(coords)
         for index in range(len(pathCoords)):
