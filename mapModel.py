@@ -121,8 +121,12 @@ class mapModel:
         if True:
             print("There should be", len(cellCenters), "polygons")
             print("There are", len(pathCells), "path polygons")
-            print("There are", len(polygons), "vor Polys")   print("Cell number",cell.cell,"is type",cell.type) 
+            print("There are", len(polygons), "vor Polys")       
+            
+            
     def remove_pathCoords(self, coords, pathCoords):
+
+
         newList = list(coords)
         for index in range(len(pathCoords)):
             newList.pop(pathCoords[len(pathCoords)-index-1]-1)
