@@ -246,6 +246,47 @@ class Controller:
             resp.type = "linear"
             self.responses.append(resp)
 
+    def snapShot(self):
+
+        virtFrame = MapParentFrame("virtMap", self.view)
+        virtFrame.init_frames(None)
+        self.config_widgets([virtFrame])
+        controlFrame = virtFrame.get_controlFrame()
+        plotFrame = virtFrame.get_mapFrame()
+        responseNames = self.get_reponseNames()
+        with open("snapshots.json", "r") as f:
+            data = json.load(f)
+
+            snapshots = data["snaps"]
+
+        print(snapshots)
+        cwd = os.getcwd()
+        snapPath = os.path.join(cwd, "snaps")
+        if not os.path.exists(snapPath):
+            os.mkdir(snapPath)
+        for snap in snapshots:
+            name = snap["name"]
+            simIndex = snap["simIndex"]
+            response = str(snap["response"])
+            times = snap["times"]
+            hue = snap["hue"]
+            zoom = snap["zoom"]
+            respIndex = responseNames.index(response)
+            controlFrame.set_respDropIndex(responseNames[respIndex])
+            currResp = self.responses[respIndex]
+            prevHue = currResp.hue
+            currResp.hue = hue
+            plotFrame.ax.set_ylim(zoom[1][0], zoom[1][1])
+            plotFrame.ax.set_xlim(zoom[0][0], zoom[0][1])
+            for time in times:
+                controlFrame.timeSlider.set(time)
+                self.update_map(controlFrame)
+                imgName = os.path.join(snapPath, str(
+                    name)+"_"+str(simIndex)+"_"+str(response)+"_"+str(time)+".png")
+                plotFrame.fig.savefig(imgName)
+
+        currResp.hue = prevHue
+
     def plot_cellPatches(self, frame):
         vorCells = self.mapModel.get_vorCells()
         frame.plot_cellPatches(self.create_cellPatches(vorCells))
