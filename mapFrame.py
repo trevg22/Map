@@ -4,14 +4,18 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter.ttk import Frame, LabelFrame
+import cartopy.crs as ccrs
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2Tk)
 
+def pack_frame(frame, row, col,sticky=False):
+    if sticky==False:
+        frame.grid(row=row,column=col)
+    else:
+        frame.grid(row=row, column=col, sticky=tk.N+tk.E+tk.W+tk.S)
 
-def pack_frame(frame, row, col):
-    frame.grid(row=row, column=col, sticky=tk.N+tk.E+tk.W+tk.S)
 
 # Parent frame that contains a MapControlFrame and MapPlotFrame
 
@@ -34,8 +38,8 @@ class MapParentFrame(LabelFrame):
         self.master = inc_frame
 
     def pack_children(self):
-        self.controlFrame.grid(row=0, column=0)
-        self.mapFrame.grid(row=1, column=0, sticky=tk.N+tk.E+tk.W+tk.S)
+        pack_frame(self.controlFrame,0,0)
+        pack_frame(self.mapFrame,1,0,sticky=True)
 
     def plot_cellPatches(self, cellPatches):
         self.mapFrame.plot_cellPatches(cellPatches)
@@ -76,7 +80,7 @@ class MapControlFrame(Frame):
             self.toggleDensityCheck=ttk.Checkbutton(self,text="Toggle Density",var=self.checkVar)
             self.timeSpin=ttk.Spinbox(self)
             self.config_widgetDefaults()
-            self.pack()
+            self.pack_children()
         else:
             self.respDropDown = None
             self.simIdDropDown = None
@@ -102,7 +106,7 @@ class MapControlFrame(Frame):
         self.scaleFacDrop.config(values=scaleFactors,width=factorPad)
         self.scaleFacDrop.set(scaleFactors[0])
 
-    def pack(self):
+    def pack_children(self):
         idLabel=ttk.Label(self,text="Run")
         timeLabel=ttk.Label(self,text="Time")
         respLabel=ttk.Label(self,text="Response")
@@ -203,7 +207,12 @@ class MapPlotFrame(Frame):
         self.fig = plt.Figure()
         self.fig.subplots_adjust(
             left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
-        self.ax = self.fig.add_subplot(111)
+        # self.ax = self.fig.add_axes([0,0,1,1],projection=ccrs.PlateCarree())
+        self.ax=self.fig.add_subplot(111,projection=ccrs.PlateCarree())
+        # self.ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
+        self.ax.set_global()
+    # Put a background image on for nice sea rendering.
+        # self.ax.stock_img()
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
         toolbar = NavigationToolbar2Tk(self.canvas, self)
@@ -227,11 +236,19 @@ class MapPlotFrame(Frame):
             self.ax.add_patch(patch)
         self.canvas.draw()
 
-    def update_cellPatch(self, color, cell):
+    def update_cellPatchColor(self, color, cell):
         self.cellPatches[cell-1].set_facecolor(color)
+
+    def update_cellPatchAlpha(self,alpha,cell):
+        self.cellPatches[cell-1].set_alpha(alpha)
 
     def draw_canvas(self):
         self.canvas.draw()
+
+    def reset_patchAlphas(self,alpha):
+        for patch in self.cellPatches:
+            patch.set_alpha(alpha)
+
 
     def set_plotLims(self, xrange, yrange):
 
@@ -271,6 +288,8 @@ class MapPlotFrame(Frame):
 
     def get_dataFrame(self):
         return self.dataFrame
+    
+    
 
         # self.resize()
     # def resize(self):
