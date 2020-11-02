@@ -73,8 +73,8 @@ class Controller:
         frame.config_timeSlider(resolution=timeSliderRes, from_=timeRange[0],
                                 to=timeRange[1], digits=4)
         frame.config_timeSpin(increment=timeSliderRes,
-                              from_=timeRange[0], to=timeRange[1], format="%5.2f",width=7)
-        
+                              from_=timeRange[0], to=timeRange[1], format="%5.2f", width=7)
+
         frame.config_respDrop(values=responses)
         frame.config_simIdDrop(values=simIds)
         frame.set_simIdDropIndex(simIds[0])
@@ -82,17 +82,41 @@ class Controller:
 
     # config matplotlib fig/plot cellpatches
     def config_mapPlot(self, frame):
-        cellCenters = self.mapModel.get_cellCenters_merc()
+        plotFrame = frame.get_mapFrame()
+        cwd = os.getcwd()
+        background = "natural-earth.png"
+        backPath = os.path.join(cwd, background)
+        if os.path.exists(backPath):
+            plotFrame.ax.imshow(imread(backPath), origin='upper', transform=ccrs.PlateCarree(),
+                                extent=[-180, 180, -90, 90])
+        cellCenters = self.mapModel.get_cellCenters()
         xrange, yrange = self.get_vorPlotLim(cellCenters)
         self.plot_cellPatches(frame)
         frame.set_plotLims(xrange, yrange)
+        states_provinces = NaturalEarthFeature(
+            category='cultural',
+            name='admin_1_states_provinces_lines',
+            scale='50m',
+            facecolor='none')
+
+        plotFrame.ax.add_feature(LAND)
+        plotFrame.ax.add_feature(COASTLINE)
+        plotFrame.ax.add_feature(BORDERS)
+        plotFrame.ax.add_feature(
+            states_provinces, edgecolor='gray', facecolor='none')
+        print("x range", xrange)
+        print("y range", yrange)
 
     # update map based on control widget values
+
     def update_map(self, frame):
         if isinstance(frame, MapControlFrame):
             plotFrame = frame.get_master().get_mapFrame()
 
+        plotFrame.reset_patchAlphas(.5)
+
         vorCells = self.mapModel.get_vorCells()
+        numCells = len(vorCells)
         responses = self.responses
         simIndex = frame.get_simIdDropIndex()
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
@@ -100,7 +124,6 @@ class Controller:
         densityOn = frame.get_densityToggle()
         timeIndex = round(timeStep*stepsPerDay)
         response = frame.get_respDropIndex()
-        numCells = len(vorCells)
 
         if densityOn:
             densityMax = self.mapModel.find_normalizedMax(response)
