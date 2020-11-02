@@ -5,25 +5,26 @@ import os
 import tkinter as tk
 from tkinter import ttk
 
-from Controller import Controller
-from mapFrame import MapParentFrame, TextFrame, MapControlFrame,MapPlotFrame
-from NetFrame import NetParentFrame,NetControlFrame,NetMapFrame
-from WindowManger import WindowManager
-from NetFrame import NetParentFrame
-from NetController import NetController
 from ColorFrame import ColorParentFrame
+from Controller import Controller
+from mapFrame import MapControlFrame, MapParentFrame, MapPlotFrame, TextFrame
+from NetController import NetController
+from NetFrame import NetControlFrame, NetMapFrame, NetParentFrame
+from WindowManger import WindowManager
+
 # Main gui class that has controller member
 
 
 class View:
 
     def __init__(self):
-        self.mapController = Controller()
+        self.mapController = Controller(self)
         self.netController=NetController()
 
         self.frames = []
 
     def init_mainWindow(self, parent):
+        self.parent=parent
         self.rootWm = WindowManager(parent, self)
         self.create_menuBar(parent)
 
@@ -48,6 +49,10 @@ class View:
         menuBar.add_cascade(label='Edit', menu=editMenu)
         viewMenu = tk.Menu(menuBar, tearoff=0)
         menuBar.add_cascade(label='View', menu=viewMenu)
+        saveMenu=tk.Menu(menuBar,tearoff=0)
+        menuBar.add_cascade(label='Save',menu=saveMenu) 
+        saveMenu.add_command(label='Snapshot',command=self.save_snapShot)
+        
         frame.config(menu=menuBar)
 
     # create map and pass to window manager
@@ -84,9 +89,11 @@ class View:
         self.rootWm.add_frame(cFrame)
         self.frames.append(cFrame)
         self.mapController.config_colorWidgets(cFrame)
+
     def spawn_network(self):
         nFrame=NetParentFrame("network",self)
         self.rootWm.add_frame(nFrame)
+        
     # remove frame from view
     def remove_frame(self, frame):
         for child in frame.winfo_children():
@@ -96,6 +103,7 @@ class View:
     def spinup_mapDataSet(self):
         cwd = os.getcwd()
         dataFile = tk.filedialog.askopenfilename(initialdir=cwd)
+        self.parent.title(self.parent.title()+" -> "+dataFile)
         self.mapController.map_spinupDataSet(self.frames, dataFile)
 
     # event capture for time slider
@@ -117,7 +125,7 @@ class View:
         elif isinstance(frame, MapControlFrame):
             plotFrame = frame.get_plotFrame()
 
-            self.mapController.update_legend(4, frame)
+            self.mapController.update_legend(6, frame)
             dataFrame = plotFrame.get_dataFrame()
             if dataFrame is not None:
                 dataFrame.set_currLine(frame.get_respDropDownVal())
@@ -142,7 +150,7 @@ class View:
     def pick_test(self,frame,event):
         print(event.name)
         print(event.guiEvent)
-        print("Picke Event")
+        print("Pick Event")
         print(event.artist)
 
     def cell_changed(self, frame, cell):
@@ -194,3 +202,10 @@ class View:
             plotframe=frame.get_plotFrame()
             cell=plotframe.get_currCell()
             self.mapController.write_cellData(plotframe,cell)
+
+    def load_mapBackground(self,file):
+        pass
+        # self.img=
+    
+    def save_snapShot(self):
+        self.mapController.snapShot()
