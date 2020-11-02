@@ -13,6 +13,8 @@ class Response:
         self.max=0
         self.hue=None
         self.type=None
+        self.upperThres=.7# maximum light value to avoid moving to black
+        self.lowerThresh=.1
         
 
     def find_respMax(self, simList,response):
@@ -47,17 +49,20 @@ class Response:
         # Hue value from HSL color standard(0-360 degrees)
         hueFrac = self.hue/360  # normalize hue
         sat = 1  # represents 100 percent
-        threshold = .70  # maximum light value to avoid moving to black
-        
+        mainColThresh=.01
         if self.max > 0 and data is not None:
             # lightness = (1-(data/self.max)*threshold)
-            if data >= self.min or data <=self.max:
-                lightness=1-((data-self.min)/self.max)*threshold
+            
+            if data >= self.max*mainColThresh and data <=self.max:
+                delta=self.upperThres-self.lowerThresh
+                lightness=(1-(data/self.max))*delta+self.lowerThresh
                 color = colorsys.hls_to_rgb(hueFrac, lightness, sat)
+            elif data <self.max*mainColThresh and data>self.min:
+                color=[1,1,0]
             elif data <=self.min:
                 color=[1,1,1]
             elif data >=self.max:
-                color=colorsys.hls_to_rgb(hueFrac,threshold,sat)
+                color=colorsys.hls_to_rgb(hueFrac,self.upperThres,sat)
         else:
             color = [1, 0, 0]
         return color
