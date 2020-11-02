@@ -9,14 +9,14 @@ class WindowManager:
         self.parentFrame = inc_frame
         self.frameList = []
         self.maxRows = 2
-        self.maxCols = 2
+        self.maxCols = 3
         self.numFrames = 0
         self.view = view
         self.parentFrame.rowconfigure(0, weight=1)
         self.parentFrame.columnconfigure(0, weight=1)
 
     # Add frame to the windowmanager and grid
-    def add_frame(self, frame,mode=None):
+    def add_frame(self, frame,mode=None,stick=False):
 
         if mode is None or mode is "grid":
             wmFrame = ttk.Frame(self.parentFrame)
