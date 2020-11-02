@@ -2,27 +2,33 @@
 # Class to interface directly with model
 # and impliment some view functionality
 import colorsys
+import json
 import time
-
+import tkinter as tk
+from tkinter import font
+import os
+import cartopy.crs as ccrs
+from cartopy.feature import BORDERS, COASTLINE, LAND, NaturalEarthFeature
 from descartes import PolygonPatch
 from matplotlib.patches import Patch
 
+from ColorFrame import ColorParentFrame
 from data_reader import Reader
 from mapFrame import MapControlFrame, MapParentFrame, MapPlotFrame
 from mapModel import mapModel
 from Polymap import CellPatch, PolygonPath
-from ColorFrame import ColorParentFrame
-from tkinter import font
-import tkinter as tk
 from Response import Response
+
+from matplotlib.image import imread
 
 
 class Controller:
 
-    def __init__(self):
+    def __init__(self, view):
         self.mapModel = mapModel()
         self.currCell = None
         self.selected_cell = None
+        self.view = view
 
     # read in data and config widgets based on data
     def map_spinupDataSet(self, frames, mavFile):
@@ -39,7 +45,7 @@ class Controller:
         cellPatches = []
         for cell in vorCells:
             path = PolygonPath(cell.polygon)
-            cellPatch = CellPatch(path, cell, picker=True)
+            cellPatch = CellPatch(path, cell, picker=True, alpha=.4)
             cellPatches.append(cellPatch)
         return cellPatches
 
@@ -222,34 +228,35 @@ class Controller:
         frame.draw_canvas()
         print("cell selected")
     # write data box if cell is selected
+
     def write_cellData(self, frame, cell):
 
         responses = self.mapModel.get_responseNames()
         if isinstance(frame, MapPlotFrame):
             controlFrame = frame.get_controlFrame()
-        currResponse=controlFrame.get_respDropIndex()
+        currResponse = controlFrame.get_respDropIndex()
         dataFrame = frame.get_dataFrame()
-        textwidget=dataFrame.textBox
-        bFont=font.Font(textwidget,textwidget.cget("font"))
+        textwidget = dataFrame.textBox
+        bFont = font.Font(textwidget, textwidget.cget("font"))
         bFont.config(weight="bold")
-        nFont=font.Font(textwidget,textwidget.cget("font"))
-        textwidget.tag_configure("bold",font=bFont)
+        nFont = font.Font(textwidget, textwidget.cget("font"))
+        textwidget.tag_configure("bold", font=bFont)
         simIndex = controlFrame.get_simIdDropIndex()
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
         timeStep = controlFrame.get_timeSliderVal()
-        
+
         timeIndex = round(timeStep*stepsPerDay)
         #response = controlFrame.get_respDropDownIndex()
         vorCells = self.mapModel.get_vorCells()
         densityOn = controlFrame.get_densityToggle()
         scaleFac = controlFrame.get_densityScaleFac()
-        cellNum=cell.get_cellNum()
+        cellNum = cell.get_cellNum()
         dataFrame.clear()
         for index, response in enumerate(responses):
             data = self.mapModel.get_dataBySimTimeCellResp(
                 simIndex, timeIndex, cellNum, index)
             if densityOn:
-                area=vorCells[cellNum-1].area
+                area = vorCells[cellNum-1].area
                 data = (data*scaleFac)/area
             dataLine = response+": "+"{0:.2f}".format(data)+"\n"
             # if index==currResponse:
@@ -257,7 +264,7 @@ class Controller:
             #     textwidget.config(font=bFont)
             # else:
             #     textwidget.config(font=nFont)
-            textwidget.insert(tk.END,dataLine)
+            textwidget.insert(tk.END, dataLine)
         dataFrame.view_currLine()
         dataFrame.write_selectedLabel(cell)
 
