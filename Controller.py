@@ -138,8 +138,13 @@ class Controller:
             else:
                 color = responses[response].gen_color(data)
             # update color on plot
-            plotFrame.update_cellPatch(color, cell+1)
-                
+            plotFrame.update_cellPatchColor(color, cell+1)
+            if color != [1,1,1]:
+                print(color) 
+                plotFrame.update_cellPatchAlpha(1,cell+1)
+            else:
+                print("color is white in cell",cell)
+
         plotFrame.draw_canvas()
 
     # create/update legend based on param values
@@ -147,10 +152,11 @@ class Controller:
         responseIndex = frame.get_respDropIndex()
         responses = self.responses
         response = responses[responseIndex]
-        max = response.max
+        max1 = response.max
+        min1 = response.min
         patches = []
         for x in range(numThresh):
-            colorThresh = max/(x+1)
+            colorThresh = min1+((x*max1-min1)/(numThresh-1))
             color = response.gen_color(colorThresh)
             colorStr = str("{:.2f}".format(colorThresh))
             patches.append(Patch(facecolor=color, label=colorStr))
