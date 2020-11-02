@@ -88,7 +88,8 @@ class mapModel:
             
 
         cells = len(cellCenters)*[None]
-        polygons, boundPoly = get_vorPolys(vorCoords, [])
+        polygons, self.boundPoly = get_vorPolys(vorCoords, [])
+
         vorPolys = list(polygons)
         for index in range(len(pathCells)):
             cellIndex=pathCells[index]-1
@@ -101,8 +102,8 @@ class mapModel:
             p4 = Point(lon-dist/2, lat+dist/2)
             poly = Polygon([p1, p2, p3, p4])
             area=get_area_wgs84(poly)
-            mercPoly = wgs84_toMercater_poly(poly)
-            cells[cellIndex] = Cell(mercPoly)
+            # mercPoly = wgs84_toMercater_poly(poly)
+            cells[cellIndex] = Cell(poly)
             cells[cellIndex].type = "Path"
             cells[cellIndex].set_cell(cellIndex+1)
             cells[cellIndex].area=area
@@ -111,9 +112,9 @@ class mapModel:
         for index, cell in enumerate(cells):
             if cell is None:
                 poly = vorPolys.pop(0)
-                mercPoly=wgs84_toMercater_poly(poly)
+                # mercPoly=wgs84_toMercater_poly(poly)
                 area = get_area_wgs84(poly)
-                cells[index] = Cell(mercPoly)
+                cells[index] = Cell(poly)
                 cells[index].type = "Grid"
                 cells[index].set_cell(index+1)
                 cells[index].area=area
@@ -125,8 +126,6 @@ class mapModel:
             
             
     def remove_pathCoords(self, coords, pathCoords):
-
-
         newList = list(coords)
         for index in range(len(pathCoords)):
             newList.pop(pathCoords[len(pathCoords)-index-1]-1)
