@@ -157,3 +157,19 @@ def convPolygons84_toCart(polygons):
 def get_area_wgs84(poly):
     areaPoly=wgs84_toCartesion_poly(poly)
     return areaPoly.area # area in km^2
+
+def moveCoords(lon_offset,lat_offset,coords):
+    
+    for coord in coords:
+        newLon=coord[0]+lon_offset
+
+        if newLon>180:
+            newLon=newLon-360
+
+        elif newLon <-180:
+            newLon=newLon+360
+
+
+        coord[0]=newLon
+        # coord[0]=coord[0]+lon_offset
+        coord[1]=coord[1]+lat_offset

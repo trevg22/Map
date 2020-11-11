@@ -4,15 +4,18 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter.ttk import Frame, LabelFrame
-import cartopy.crs as ccrs
 
+import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2Tk)
 
-def pack_frame(frame, row, col,sticky=False):
-    if sticky==False:
-        frame.grid(row=row,column=col)
+import settings
+
+
+def pack_frame(frame, row, col, sticky=False):
+    if sticky == False:
+        frame.grid(row=row, column=col)
     else:
         frame.grid(row=row, column=col, sticky=tk.N+tk.E+tk.W+tk.S)
 
@@ -28,7 +31,8 @@ class MapParentFrame(LabelFrame):
 
     def init_frames(self, master):
         super().__init__(master, text=self.label)
-        self.controlFrame = MapControlFrame(self.view, master=self)
+        self.controlFrame = MapControlFrame(
+            self.view, master=self, parent=self)
         self.mapFrame = MapPlotFrame(
             self.view, master=self, controlFrame=self.controlFrame)
         self.controlFrame.set_plotFrame(self.mapFrame)
@@ -38,8 +42,8 @@ class MapParentFrame(LabelFrame):
         self.master = inc_frame
 
     def pack_children(self):
-        pack_frame(self.controlFrame,0,0)
-        pack_frame(self.mapFrame,1,0,sticky=True)
+        pack_frame(self.controlFrame, 0, 0)
+        pack_frame(self.mapFrame, 1, 0, sticky=True)
 
     def plot_cellPatches(self, cellPatches):
         self.mapFrame.plot_cellPatches(cellPatches)
@@ -53,7 +57,7 @@ class MapParentFrame(LabelFrame):
     def get_controlFrame(self):
         return self.controlFrame
 
-    def get_mapFrame(self):
+    def get_plotFrame(self):
         return self.mapFrame
 
 # Frame that contains sliders and dropdowns to control map
@@ -66,19 +70,21 @@ class MapControlFrame(Frame):
         self.view = view
         self.master = master
         self.plotFrame = plotFrame
+        self.parent = parent
         if master is not None:
             super().__init__(master)
         else:
             self.frame = ttk.Frame()
 
         if default == True:
-            self.checkVar=tk.IntVar()
+            self.checkVar = tk.IntVar()
             self.respDropDown = ttk.Combobox(self)
-            self.simIdDropDown = ttk.Combobox(self,width=3)
-            self.timeSlider = tk.Scale(self, orient=tk.HORIZONTAL,showvalue=0)
-            self.scaleFacDrop=ttk.Combobox(self)
-            self.toggleDensityCheck=ttk.Checkbutton(self,text="Toggle Density",var=self.checkVar)
-            self.timeSpin=ttk.Spinbox(self)
+            self.simIdDropDown = ttk.Combobox(self, width=3)
+            self.timeSlider = tk.Scale(self, orient=tk.HORIZONTAL, showvalue=0)
+            self.scaleFacDrop = ttk.Combobox(self)
+            self.toggleDensityCheck = ttk.Checkbutton(self, var=self.checkVar)
+            self.timeSpin = ttk.Spinbox(self)
+            self.settingsButton = ttk.Button(self, width=4,text="\u2699")
             self.config_widgetDefaults()
             self.pack_children()
         else:
@@ -94,46 +100,54 @@ class MapControlFrame(Frame):
             "<<ComboboxSelected>>", lambda event: self.view.map_simIdDropdownChanged(self, event))
         self.respDropDown.bind(
             "<<ComboboxSelected>>", lambda event: self.view.map_responseDropDownChanged(self, event))
-        
-        self.toggleDensityCheck.config(command=lambda:self.view.densityToggled(self))
-        self.scaleFacDrop.bind("<<ComboboxSelected>>",lambda event:self.view.scaleFacChanged(self,event))
+
+        self.toggleDensityCheck.config(
+            command=lambda: self.view.densityToggled(self))
+        self.scaleFacDrop.bind(
+            "<<ComboboxSelected>>", lambda event: self.view.scaleFacChanged(self, event))
         self.timeSpin.config(command=self.timeSpinChanged)
         self.timeSpin.set('0.00')
-        scaleFactors=[10,100,1000,10000,100000]
+        scaleFactors = [10, 100, 1000, 10000, 100000]
         scaleFactors.sort()
-        factorPad=len(str(scaleFactors[-1]))
+        factorPad = len(str(scaleFactors[-1]))
 
-        self.scaleFacDrop.config(values=scaleFactors,width=factorPad)
+        self.scaleFacDrop.config(values=scaleFactors, width=factorPad)
         self.scaleFacDrop.set(scaleFactors[0])
+        self.settingsButton.config(
+            command=lambda: self.view.spawn_plotSettings(self.parent))
 
     def pack_children(self):
-        idLabel=ttk.Label(self,text="Run")
-        timeLabel=ttk.Label(self,text="Time")
-        respLabel=ttk.Label(self,text="Response")
-        scaleFacLabel=ttk.Label(self,text="Scale Factor")
-        idLabel.grid(row=0,column=0)
+        idLabel = ttk.Label(self, text="Run")
+        timeLabel = ttk.Label(self, text="Time")
+        respLabel = ttk.Label(self, text="Response")
+        scaleFacLabel = ttk.Label(self, text="Scale Factor")
+        toggleDensityLabel = ttk.Label(self, text='Toggle Density')
+        settingsLabel = ttk.Label(self, text='Settings')
+        idLabel.grid(row=0, column=0)
         self.simIdDropDown.grid(row=1, column=0)
-        timeLabel.grid(row=0,column=2)   
+        timeLabel.grid(row=0, column=2)
         self.timeSlider.grid(row=1, column=2)
-        respLabel.grid(row=0,column=3)
+        respLabel.grid(row=0, column=3)
         self.respDropDown.grid(row=1, column=3)
-        scaleFacLabel.grid(row=0,column=4)
-        self.scaleFacDrop.grid(row=1,column=4)
-        
-        self.toggleDensityCheck.grid(row=1,column=5)
-        self.timeSpin.grid(row=1,column=1)
+        scaleFacLabel.grid(row=0, column=4)
+        self.scaleFacDrop.grid(row=1, column=4)
+        toggleDensityLabel.grid(row=0, column=5)
+        self.toggleDensityCheck.grid(row=1, column=5)
+        settingsLabel.grid(row=0,column=6)
+        self.settingsButton.grid(row=1, column=6)
+        self.timeSpin.grid(row=1, column=1)
 
         self.grid(row=1, column=0)
 
     def timeSpinChanged(self):
-        value=self.timeSpin.get()
+        value = self.timeSpin.get()
         self.timeSlider.set(value)
-        self.view.map_timeSliderReleased(self,None)
+        self.view.map_timeSliderReleased(self, None)
 
-    def timeSliderChanged(self,event):
-        value=self.timeSlider.get()
+    def timeSliderChanged(self, event):
+        value = self.timeSlider.get()
         self.timeSpin.set(value)
-        self.view.map_timeSliderReleased(self,event)
+        self.view.map_timeSliderReleased(self, event)
 
     def set_master(self, inc_frame):
         self.master = inc_frame
@@ -162,8 +176,8 @@ class MapControlFrame(Frame):
     def config_respDrop(self, *arg, **kwargs):
         self.respDropDown.config(*arg, **kwargs)
 
-    def config_timeSpin(self,*arg,**kwargs):
-        self.timeSpin.config(*arg,**kwargs)
+    def config_timeSpin(self, *arg, **kwargs):
+        self.timeSpin.config(*arg, **kwargs)
 
     def set_timeSliderIndex(self, index):
         self.timeSlider.set(index)
@@ -173,6 +187,9 @@ class MapControlFrame(Frame):
 
     def set_respDropIndex(self, index):
         self.respDropDown.set(index)
+
+    def set_runDropIndex(self, index):
+        self.simIdDropDown.set(index)
 
     def set_plotFrame(self, frame):
         self.plotFrame = frame
@@ -200,6 +217,9 @@ class MapPlotFrame(Frame):
 
         self.controlFrame = controlFrame
         self.dataFrame = None
+        self.legendLoc = settings.defLegendLoc
+        self.showLegend = True
+
         if master is not None:
             super().__init__(master)
         else:
@@ -207,12 +227,9 @@ class MapPlotFrame(Frame):
         self.fig = plt.Figure()
         self.fig.subplots_adjust(
             left=None, bottom=None, right=None, top=None, wspace=None, hspace=None)
-        # self.ax = self.fig.add_axes([0,0,1,1],projection=ccrs.PlateCarree())
-        self.ax=self.fig.add_subplot(111,projection=ccrs.PlateCarree())
-        # self.ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
+        self.ax = self.fig.add_subplot(111, projection=ccrs.PlateCarree())
         self.ax.set_global()
     # Put a background image on for nice sea rendering.
-        # self.ax.stock_img()
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
         toolbar = NavigationToolbar2Tk(self.canvas, self)
@@ -229,7 +246,7 @@ class MapPlotFrame(Frame):
 
     def plot_cellPatches(self, cellPatches):
         self.cellPatches = cellPatches
-        for index,patch in enumerate(cellPatches):
+        for index, patch in enumerate(cellPatches):
             patch.set_facecolor([1, 1, 1])
             # if index ==14:
             #     self.ax.add_patch(patch)
@@ -239,16 +256,15 @@ class MapPlotFrame(Frame):
     def update_cellPatchColor(self, color, cell):
         self.cellPatches[cell-1].set_facecolor(color)
 
-    def update_cellPatchAlpha(self,alpha,cell):
+    def update_cellPatchAlpha(self, alpha, cell):
         self.cellPatches[cell-1].set_alpha(alpha)
 
     def draw_canvas(self):
         self.canvas.draw()
 
-    def reset_patchAlphas(self,alpha):
+    def reset_patchAlphas(self, alpha):
         for patch in self.cellPatches:
             patch.set_alpha(alpha)
-
 
     def set_plotLims(self, xrange, yrange):
 
@@ -288,8 +304,6 @@ class MapPlotFrame(Frame):
 
     def get_dataFrame(self):
         return self.dataFrame
-    
-    
 
         # self.resize()
     # def resize(self):
@@ -366,3 +380,34 @@ class TextFrame(LabelFrame):
 
     def get_parent(self):
         return self.parent
+
+
+class MapSettingsFrame(LabelFrame):
+
+    def __init__(self, label, view, master=None, parent=None):
+        self.view = view
+        self.master = master
+        self.parent = parent
+        self.label = label
+
+    def init_frames(self, master):
+        self.master = master
+        super().__init__(self.master, text=self.label)
+        self.legendLocDrop = ttk.Combobox(self)
+        self.configWidget_defaults()
+        self.pack_children()
+
+    def pack_children(self):
+        self.legendLocDrop.grid(row=0, column=0)
+
+    def configWidget_defaults(self):
+        values = ['upper left', 'upper right', 'lower left', 'lower right']
+        self.legendLocDrop.config(values=values)
+        self.legendLocDrop.set(settings.defLegendLoc)
+        self.legendLocDrop.bind(
+            "<<ComboboxSelected>>", self.legendLoc_changed)
+
+    def legendLoc_changed(self, event):
+        args = {}
+        args["legendLoc"] = str(self.legendLocDrop.get())
+        self.view.plotSettings_changed(args, self.parent)

@@ -3,23 +3,25 @@
 # and impliment some view functionality
 import colorsys
 import json
+import os
 import time
 import tkinter as tk
+from colorsys import rgb_to_hls
 from tkinter import font
-import os
+
 import cartopy.crs as ccrs
 from cartopy.feature import BORDERS, COASTLINE, LAND, NaturalEarthFeature
 from descartes import PolygonPatch
+from matplotlib.image import imread
 from matplotlib.patches import Patch
 
+import settings
 from ColorFrame import ColorParentFrame
 from data_reader import Reader
 from mapFrame import MapControlFrame, MapParentFrame, MapPlotFrame
 from mapModel import mapModel
 from Polymap import CellPatch, PolygonPath
 from Response import Response
-
-from matplotlib.image import imread
 
 
 class Controller:
@@ -39,13 +41,14 @@ class Controller:
         vorCells = self.mapModel.get_vorCells()
         self.create_cellPatches(vorCells)
         self.config_widgets(frames)
+        
 
     # creat cellPatches from voronoi polygons
     def create_cellPatches(self, vorCells):
         cellPatches = []
         for cell in vorCells:
             path = PolygonPath(cell.polygon)
-            cellPatch = CellPatch(path, cell, picker=True, alpha=.4)
+            cellPatch = CellPatch(path, cell, picker=True, alpha=.3)
             cellPatches.append(cellPatch)
         return cellPatches
 
@@ -64,10 +67,8 @@ class Controller:
         responses = self.responses
         frame.config_respDrop(values=responsesNames)
         frame.set_respDropIndex(responsesNames[0])
-        minVal = responses[0].min
-        maxVal = responses[0].max
-        hue = responses[0].hue
-        frame.update_entrys(minVal, maxVal, hue)
+        curResp: Response = responses[0]
+        frame.update_entrys(curResp)
         print("configuring colors")
 
     # config map widgets sliders/dropdowns
@@ -88,7 +89,7 @@ class Controller:
 
     # config matplotlib fig/plot cellpatches
     def config_mapPlot(self, frame):
-        plotFrame = frame.get_mapFrame()
+        plotFrame = frame.get_plotFrame()
         cwd = os.getcwd()
         background = "natural-earth.png"
         backPath = os.path.join(cwd, background)
@@ -117,19 +118,24 @@ class Controller:
 
     def update_map(self, frame):
         if isinstance(frame, MapControlFrame):
-            plotFrame = frame.get_master().get_mapFrame()
+            plotFrame:MapPlotFrame = frame.get_master().get_plotFrame()
+            controlFrame:MapControlFrame=frame
 
-        plotFrame.reset_patchAlphas(.5)
+        elif isinstance(frame,MapParentFrame):
+            plotFrame:MapPlotFrame=frame.get_plotFrame()
+            controlFrame:MapControlFrame=frame.get_controlFrame() 
+
+        plotFrame.reset_patchAlphas(.3)
 
         vorCells = self.mapModel.get_vorCells()
         numCells = len(vorCells)
         responses = self.responses
-        simIndex = frame.get_simIdDropIndex()
+        simIndex = controlFrame.get_simIdDropIndex()
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
-        timeStep = frame.get_timeSliderVal()
-        densityOn = frame.get_densityToggle()
+        timeStep = controlFrame.get_timeSliderVal()
+        densityOn = controlFrame.get_densityToggle()
         timeIndex = round(timeStep*stepsPerDay)
-        response = frame.get_respDropIndex()
+        response = controlFrame.get_respDropIndex()
 
         if densityOn:
             densityMax = self.mapModel.find_normalizedMax(response)
@@ -145,50 +151,50 @@ class Controller:
                 color = responses[response].gen_color(data)
             # update color on plot
             plotFrame.update_cellPatchColor(color, cell+1)
-            if color != [1,1,1]:
-                print(color) 
-                plotFrame.update_cellPatchAlpha(1,cell+1)
+            if color != [1, 1, 1]:
+                plotFrame.update_cellPatchAlpha(1, cell+1)
             else:
-                print("color is white in cell",cell)
+                pass
+                # print("color is white in cell",cell)
 
         plotFrame.draw_canvas()
 
     # create/update legend based on param values
     def update_legend(self, numThresh, frame):
-        responseIndex = frame.get_respDropIndex()
+        if isinstance(frame,MapParentFrame):
+            controlFrame:MapControlFrame=frame.get_controlFrame()
+            plotFrame:MapPlotFrame=frame.get_plotFrame()
+
+        elif isinstance(frame,MapControlFrame):
+            controlFrame:MapControlFrame=frame
+            plotFrame:MapPlotFrame=controlFrame.get_plotFrame()
+
+        responseIndex = controlFrame.get_respDropIndex()
         responses = self.responses
         response = responses[responseIndex]
         max1 = response.max
         min1 = response.min
+        lowThresh = .0001
         patches = []
+        smallVal = max1*lowThresh
+
+        lowLabel = '>' + "{:.2e}".format(smallVal)
+        patches.append(Patch(facecolor=[1, 1, 0], label=lowLabel))
         for x in range(numThresh):
-            colorThresh = min1+((x*max1-min1)/(numThresh-1))
+            colorThresh = ((x+1)*(max1-min1)/(numThresh))+min1
             color = response.gen_color(colorThresh)
-            colorStr = str("{:.2f}".format(colorThresh))
-            patches.append(Patch(facecolor=color, label=colorStr))
+            dataThresh = str("{:.2f}".format(colorThresh))
+            patches.append(Patch(facecolor=color, label=dataThresh))
 
-        plotFrame = frame.get_plotFrame()
-
-        plotFrame.set_legend(patches)
+        location=plotFrame.legendLoc
+        plotFrame.ax.legend(handles=patches,loc=location)
+        plotFrame.draw_canvas()
 
     # generate a color based on linear scaled
     # hue currently hard coded
 
-    def gen_colorLinear(self, data, max):
-        # Hue value from HSL color standard(0-360 degrees)
-        hue = 197
-        hueFrac = hue/360  # normalize hue
-        sat = 1  # represents 100 percent
-        threshold = .90  # maximum light value to avoid moving to black
-
-        if max > 0 and data is not None:
-            lightness = (1-(data/max)*threshold)
-            color = colorsys.hls_to_rgb(hueFrac, lightness, sat)
-        else:
-            color = [1, 0, 0]
-        return color
-
     # detect if the mouse has changed cell
+
     def mapDetect_cellChange(self, frame, event):
         if event.inaxes == frame.get_axes():
             # Check if mouse in is currCell
@@ -215,6 +221,9 @@ class Controller:
 
     # if cell is selected highlight cell and write databox
     def cell_selected(self, frame, event):
+
+        controlFrame: MapControlFrame = frame.get_controlFrame()
+
         artist = event.artist
         if self.selected_cell is not None:
             self.selected_cell.set_linewidth(1.0)
@@ -269,7 +278,7 @@ class Controller:
         dataFrame.write_selectedLabel(cell)
 
     def initialize_respObjs(self):
-        default_hue = 132
+        default_hue = 185
         responsesNames = self.get_reponseNames()
         simList = self.mapModel.get_simList()
         self.responses = []
@@ -288,7 +297,7 @@ class Controller:
         virtFrame.init_frames(None)
         self.config_widgets([virtFrame])
         controlFrame = virtFrame.get_controlFrame()
-        plotFrame = virtFrame.get_mapFrame()
+        plotFrame = virtFrame.get_plotFrame()
         responseNames = self.get_reponseNames()
         with open("snapshots.json", "r") as f:
             data = json.load(f)
@@ -302,24 +311,31 @@ class Controller:
             os.mkdir(snapPath)
         for snap in snapshots:
             name = snap["name"]
-            simIndex = snap["simIndex"]
+            simIndex = int(snap["simIndex"])
             response = str(snap["response"])
             times = snap["times"]
             hue = snap["hue"]
-            zoom = snap["zoom"]
+            if "zoom" in snap:
+                zoom = snap["zoom"]
+                plotFrame.ax.set_ylim(zoom[1][0], zoom[1][1])
+                plotFrame.ax.set_xlim(zoom[0][0], zoom[0][1])
+
+            if "legendLoc" in snap:
+                plotFrame.legendLoc=str(snap["legendLoc"])
+            controlFrame.set_runDropIndex(simIndex)
             respIndex = responseNames.index(response)
             controlFrame.set_respDropIndex(responseNames[respIndex])
             currResp = self.responses[respIndex]
             prevHue = currResp.hue
             currResp.hue = hue
-            plotFrame.ax.set_ylim(zoom[1][0], zoom[1][1])
-            plotFrame.ax.set_xlim(zoom[0][0], zoom[0][1])
+
             for time in times:
+                self.update_legend(settings.numLegendEntries, controlFrame)
                 controlFrame.timeSlider.set(time)
                 self.update_map(controlFrame)
                 imgName = os.path.join(snapPath, str(
                     name)+"_"+str(simIndex)+"_"+str(response)+"_"+str(time)+".png")
-                plotFrame.fig.savefig(imgName)
+                plotFrame.fig.savefig(imgName, bbox_inches='tight')
 
         currResp.hue = prevHue
 

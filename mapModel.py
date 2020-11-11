@@ -12,7 +12,7 @@ from shapely.geometry import Point, Polygon
 from shapely.ops import polygonize
 
 from data_reader import Reader
-from helpers import convPolygs84_toMerc, get_vorPolys, wgs84_toMercator, wgs84_toMercater_coords, wgs84_toMercater_poly, get_area_wgs84
+from helpers import convPolygs84_toMerc, get_vorPolys, wgs84_toMercator, wgs84_toMercater_coords, wgs84_toMercater_poly, get_area_wgs84,moveCoords
 from Polymap import Cell
 from Response import Response, ResponseGroup
 
@@ -80,8 +80,7 @@ class mapModel:
         pathCells = self.get_pathCells()
         pathCells.reverse()
         cellCenters = self.get_cellCenters()
-        coords = list(cellCenters)
-        vorCoords=list(coords)
+        vorCoords = list(cellCenters)
         for index in pathCells:
             del vorCoords[index-1]
 
@@ -146,34 +145,7 @@ class mapModel:
         return newCoords
 
     
-    # def initialize_respObjs(self):
-    #     default_hue = 197
-    #     responsesNames = self.get_responseNames()
-    #     self.responses = []
-    #     self.respGroups = self.reader.get_respGroups()
-    #     for x, name in enumerate(responsesNames):
-    #         found = False
-    #         self.responses.append(Response())
-    #         self.responses[x].set_name(name)
-
-    #         for group in self.respGroups:
-    #             for resp in self.respGroups[group].get_responseNames():
-
-    #                 if resp in name:
-    #                     found = True
-    #                     self.responses[x].set_respGroup(self.respGroups[group])
-    #                     self.respGroups[group].append_responseIndex(x)
-    #         if found == False:
-    #             self.responses[x].set_respGroup(ResponseGroup())
-    #             self.responses[x].get_respGroup().append_responseIndex(x)
-    #             self.responses[x].get_respGroup().set_group(name)
-    #             self.responses[x].get_respGroup().set_hue(default_hue)
-    #             self.respGroups.update({self.responses[x].get_respGroup(
-    #             ).get_group(): self.responses[x].get_respGroup()})
-
-    #     for respGrp in self.respGroups.values():
-    #         respGrp.find_groupMax(self.simList)
-
+    
     def print_respObjs(self):
         responses = self.get_responseNames()
         print("response groups")

@@ -12,16 +12,19 @@ class WindowManager:
         self.maxCols = 3
         self.numFrames = 0
         self.view = view
-        self.parentFrame.rowconfigure(0, weight=1)
-        self.parentFrame.columnconfigure(0, weight=1)
+        # self.parentFrame.rowconfigure(0, weight=1)
+        # self.parentFrame.columnconfigure(0, weight=1)
 
     # Add frame to the windowmanager and grid
     def add_frame(self, frame,mode=None,stick=False):
 
         if mode is None or mode is "grid":
             wmFrame = ttk.Frame(self.parentFrame)
+            style=ttk.Style()
+            # style.configure('TFrame',background='green')
             wmFrame.rowconfigure(0, weight=1)
             wmFrame.columnconfigure(0, weight=1)
+            self.place_frame(wmFrame)
 
         elif mode is "floating":
             wmFrame=tk.Toplevel(self.parentFrame)
@@ -29,7 +32,6 @@ class WindowManager:
         button = ttk.Button(wmFrame, text='x', width=3,
                             command=lambda: self.delete_frame(wmFrame))
         self.frameList.append(wmFrame)
-        self.place_frame(wmFrame)
         button.grid(row=0, column=1, sticky=tk.N+tk.E)
         frame.init_frames(wmFrame)
         frame.columnconfigure(0, weight=1)
