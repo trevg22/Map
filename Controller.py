@@ -74,18 +74,41 @@ class Controller:
     # config map widgets sliders/dropdowns
     def config_mapWidgets(self, frame):
         simIds = self.mapModel.get_simIdList()
-        responses = self.mapModel.get_responseNames()
+        resp_targs = self.mapModel.get_responseNames()
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
         timeSliderRes = 1/stepsPerDay
         frame.config_timeSlider(resolution=timeSliderRes, from_=timeRange[0],
                                 to=timeRange[1], digits=4)
         frame.config_timeSpin(increment=timeSliderRes,
                               from_=timeRange[0], to=timeRange[1], format="%5.2f", width=7)
+        # configure dropdowns
+        targNamelen=0
+        respNameLen=0
+        
+        respNames=[]
+        targNames=[]
+        for string in resp_targs:
+            underInd=string.rfind('_')
+            respName=string[:underInd]
+            targName=string[underInd+1:]
+            if len(targName) > targNamelen:
+                targNamelen=len(targName)
 
-        frame.config_respDrop(values=responses)
+            if len(respName) >respNameLen:
+                respNameLen=len(respName)
+
+            targNames.append(targName)
+            respNames.append(respName)
+        print(targNames)
+        frame.config_respDrop(values=respNames,width=respNameLen)
+        frame.targDropDown.config(width=targNamelen)
         frame.config_simIdDrop(values=simIds)
         frame.set_simIdDropIndex(simIds[0])
-        frame.set_respDropIndex(responses[0])
+        frame.set_respDropIndex(respNames[0]) 
+        self.view.filter_drop(frame,None)
+        availableTargs=frame.targDropDown.cget('values')
+        print(availableTargs[0])
+        frame.targDropDown.set(list(availableTargs)[0])
 
     # config matplotlib fig/plot cellpatches
     def config_mapPlot(self, frame):
@@ -135,20 +158,25 @@ class Controller:
         timeStep = controlFrame.get_timeSliderVal()
         densityOn = controlFrame.get_densityToggle()
         timeIndex = round(timeStep*stepsPerDay)
-        response = controlFrame.get_respDropIndex()
+
+        resp_targ=controlFrame.get_currResp_targ()
+        print("targ drop val",controlFrame.targDropDown.get())
+        resp_targs=self.mapModel.get_responseNames()
+        
+        responseIndex = resp_targs.index(resp_targ) 
 
         if densityOn:
-            densityMax = self.mapModel.find_normalizedMax(response)
+            densityMax = self.mapModel.find_normalizedMax(responseIndex)
 
         for cell in range(numCells):
             data = self.mapModel.get_dataBySimTimeCellResp(
-                simIndex, timeIndex, cell+1, response)
+                simIndex, timeIndex, cell+1, responseIndex)
             if densityOn:
                 area = vorCells[cell].area
-                color = responses[response].gen_colorNorm(
+                color = responses[responseIndex].gen_colorNorm(
                     data, densityMax, area)
             else:
-                color = responses[response].gen_color(data)
+                color = responses[responseIndex].gen_color(data)
             # update color on plot
             plotFrame.update_cellPatchColor(color, cell+1)
             if color != [1, 1, 1]:
@@ -169,7 +197,9 @@ class Controller:
             controlFrame:MapControlFrame=frame
             plotFrame:MapPlotFrame=controlFrame.get_plotFrame()
 
-        responseIndex = controlFrame.get_respDropIndex()
+        resp_targ=controlFrame.get_currResp_targ()
+        resp_targs=self.mapModel.get_responseNames()
+        responseIndex = resp_targs.index(resp_targ)
         responses = self.responses
         response = responses[responseIndex]
         max1 = response.max

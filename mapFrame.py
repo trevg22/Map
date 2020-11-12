@@ -79,12 +79,13 @@ class MapControlFrame(Frame):
         if default == True:
             self.checkVar = tk.IntVar()
             self.respDropDown = ttk.Combobox(self)
+            self.targDropDown = ttk.Combobox(self)
             self.simIdDropDown = ttk.Combobox(self, width=3)
             self.timeSlider = tk.Scale(self, orient=tk.HORIZONTAL, showvalue=0)
             self.scaleFacDrop = ttk.Combobox(self)
             self.toggleDensityCheck = ttk.Checkbutton(self, var=self.checkVar)
             self.timeSpin = ttk.Spinbox(self)
-            self.settingsButton = ttk.Button(self, width=4,text="\u2699")
+            self.settingsButton = ttk.Button(self, width=4, text="\u2699")
             self.config_widgetDefaults()
             self.pack_children()
         else:
@@ -99,8 +100,9 @@ class MapControlFrame(Frame):
         self.simIdDropDown.bind(
             "<<ComboboxSelected>>", lambda event: self.view.map_simIdDropdownChanged(self, event))
         self.respDropDown.bind(
-            "<<ComboboxSelected>>", lambda event: self.view.map_responseDropDownChanged(self, event))
-
+            "<<ComboboxSelected>>", lambda event: self.view.filter_drop(self, event))
+        self.targDropDown.bind(
+            "<<ComboboxSelected>>", lambda event: self.view.map_responseChanged(self, event))
         self.toggleDensityCheck.config(
             command=lambda: self.view.densityToggled(self))
         self.scaleFacDrop.bind(
@@ -129,12 +131,13 @@ class MapControlFrame(Frame):
         self.timeSlider.grid(row=1, column=2)
         respLabel.grid(row=0, column=3)
         self.respDropDown.grid(row=1, column=3)
-        scaleFacLabel.grid(row=0, column=4)
-        self.scaleFacDrop.grid(row=1, column=4)
-        toggleDensityLabel.grid(row=0, column=5)
-        self.toggleDensityCheck.grid(row=1, column=5)
-        settingsLabel.grid(row=0,column=6)
-        self.settingsButton.grid(row=1, column=6)
+        self.targDropDown.grid(row=1, column=4)
+        scaleFacLabel.grid(row=0, column=5)
+        self.scaleFacDrop.grid(row=1, column=5)
+        toggleDensityLabel.grid(row=0, column=6)
+        self.toggleDensityCheck.grid(row=1, column=6)
+        settingsLabel.grid(row=0, column=7)
+        self.settingsButton.grid(row=1, column=7)
         self.timeSpin.grid(row=1, column=1)
 
         self.grid(row=1, column=0)
@@ -151,6 +154,10 @@ class MapControlFrame(Frame):
 
     def set_master(self, inc_frame):
         self.master = inc_frame
+
+    def get_currResp_targ(self):
+
+        return self.respDropDown.get()+'_'+self.targDropDown.get()
 
     def get_timeSliderVal(self):
         return float(self.timeSlider.get())
@@ -179,17 +186,18 @@ class MapControlFrame(Frame):
     def config_timeSpin(self, *arg, **kwargs):
         self.timeSpin.config(*arg, **kwargs)
 
-    def set_timeSliderIndex(self, index):
-        self.timeSlider.set(index)
+    def set_timeSliderIndex(self, choice):
+        self.timeSlider.set(choice)
 
-    def set_simIdDropIndex(self, index):
-        self.simIdDropDown.set(index)
+    def set_simIdDropIndex(self, choice):
+        self.simIdDropDown.set(choice)
 
-    def set_respDropIndex(self, index):
-        self.respDropDown.set(index)
+    def set_respDropIndex(self, choice):
+        self.respDropDown.set(choice)
+        self.view.filter_drop(self, None)
 
-    def set_runDropIndex(self, index):
-        self.simIdDropDown.set(index)
+    def set_runDropIndex(self, choice):
+        self.simIdDropDown.set(choice)
 
     def set_plotFrame(self, frame):
         self.plotFrame = frame

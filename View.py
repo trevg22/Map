@@ -143,7 +143,7 @@ class View:
         self.mapController.update_map(frame)
 
     # event capture for response drop down
-    def map_responseDropDownChanged(self, frame, event):
+    def map_responseChanged(self, frame, event):
         self.mapController.update_map(frame)
 
         if isinstance(frame, MapParentFrame):
@@ -272,3 +272,24 @@ class View:
             plotFrame.legendLoc = args["legendLoc"]
             self.mapController.update_legend(
                 settings.numLegendEntries, controlFrame)
+
+    def filter_drop(self,frame,event):
+        print("resp drop changed")
+        if isinstance(frame,MapControlFrame):
+            targs=[]
+            resp_targs=self.mapController.get_reponseNames()
+            respName=frame.respDropDown.get()
+
+            for string in resp_targs:
+                if respName in string:
+                    underInd=string.rfind('_') 
+                    targ=string[underInd+1:]
+                    targs.append(targ)
+            oldTarg=frame.targDropDown.get()
+            frame.targDropDown.config(values=targs)
+            if oldTarg in targs:
+                frame.targDropDown.set(oldTarg)
+            else:
+                frame.targDropDown.set(targs[0])
+    
+            self.map_responseChanged(frame,None)
