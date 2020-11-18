@@ -39,13 +39,6 @@ class View:
         menuBar = tk.Menu(frame)
         fileMenu = tk.Menu(menuBar, tearoff=0)
         fileMenu.add_command(label='Load Mav', command=self.spinup_mapDataSet)
-        # fileMenu.add_command(label='Network',command=self.create_network_hardcoded)
-        # fileMenu.add_command(label='toggle',command=self.toggle_GUI)
-        # fileMenu.add_command(label='Spawn Map', command=self.spawn_map)
-        # fileMenu.add_command(label="Spawn Data Box",
-        #  command=self.spawn_dataBox)
-        # fileMenu.add_command(label="Spawn Color",command=self.spawn_colorTool)
-        # fileMenu.add_command(label='Spawn Network', command=self.spawn_network)
         gridSpawnMenu = tk.Menu(fileMenu, tearoff=0)
         fileMenu.add_cascade(label='Grid Spawn', menu=gridSpawnMenu)
         gridSpawnMenu.add_command(
@@ -63,6 +56,8 @@ class View:
             label='Color', command=lambda: self.spawn_colorTool('floating'))
         floatSpawnMenu.add_command(
             label='Data Box', command=lambda: self.spawn_dataBox('floating'))
+        
+        floatSpawnMenu.add_command(label='Control Frame',command=lambda :self.spawn_controlFrame('floating'))
 
         menuBar.add_cascade(label='File', menu=fileMenu)
         editMenu = tk.Menu(menuBar, tearoff=0)
@@ -86,7 +81,10 @@ class View:
         self.mapController.config_mapWidgets(frame.controlFrame)
         self.mapController.update_map(frame)
         self.mapController.update_legend(settings.numLegendEntries, frame)
-
+        controlFrame:MapControlFrame=frame.get_controlFrame()
+        self.map_responseChanged(controlFrame,None) # update map for first time 
+        print("2nd added")
+        # controlFrame.grid(row=0, column=0, sticky=tk.N+tk.E+tk.W+tk.S)
         for currFrame in self.frames:
             if isinstance(currFrame, TextFrame):
                 plotFrame = frame.get_plotFrame()
@@ -116,6 +114,11 @@ class View:
         nFrame = NetParentFrame("network", self)
         self.rootWm.add_frame(nFrame)
 
+    def spawn_controlFrame(self,WM_mode):
+        cFrame=MapControlFrame(self)
+        self.rootWm.add_frame(cFrame,mode=WM_mode)
+        self.mapController.config_mapWidgets(cFrame)
+
     def spawn_plotSettings(self, parent):
         sFrame: MapSettingsFrame = MapSettingsFrame('Plot Settings', self)
         sFrame.parent = parent
@@ -144,12 +147,13 @@ class View:
 
     # event capture for response drop down
     def map_responseChanged(self, frame, event):
-        self.mapController.update_map(frame)
 
         if isinstance(frame, MapParentFrame):
             plotFrame = frame.get_plotFrame()
             dataFrame = plotFrame.get_dataFrame()
         elif isinstance(frame, MapControlFrame):
+            self.filter_drop(frame,event)
+            self.mapController.update_map(frame)
             plotFrame = frame.get_plotFrame()
 
             self.mapController.update_legend(settings.numLegendEntries, frame)
@@ -284,7 +288,8 @@ class View:
                 if respName in string:
                     underInd=string.rfind('_') 
                     targ=string[underInd+1:]
-                    targs.append(targ)
+                    if targ not in targs:
+                        targs.append(targ)
             oldTarg=frame.targDropDown.get()
             frame.targDropDown.config(values=targs)
             if oldTarg in targs:
@@ -292,4 +297,4 @@ class View:
             else:
                 frame.targDropDown.set(targs[0])
     
-            self.map_responseChanged(frame,None)
+            # self.map_responseChanged(frame,None)

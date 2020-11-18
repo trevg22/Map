@@ -207,8 +207,6 @@ class mapModel:
     def get_responseNames(self):
         return self.reader.get_responses()[0]
 
-    def get_responses(self):
-        return self.responses
 
     def get_timeParams(self):
         timesteps = self.get_timeSteps()
@@ -253,6 +251,7 @@ class mapModel:
 
     def get_simList(self):
         return self.simList
+        
     def get_indepVars(self):
         return self.reader.get_IndVars()
 

@@ -16,7 +16,7 @@ class WindowManager:
         # self.parentFrame.columnconfigure(0, weight=1)
 
     # Add frame to the windowmanager and grid
-    def add_frame(self, frame,mode=None,stick=False):
+    def add_frame(self, frame,mode=None,stick=False,init=True):
 
         if mode is None or mode is "grid":
             wmFrame = ttk.Frame(self.parentFrame)
@@ -33,10 +33,12 @@ class WindowManager:
                             command=lambda: self.delete_frame(wmFrame))
         self.frameList.append(wmFrame)
         button.grid(row=0, column=1, sticky=tk.N+tk.E)
-        frame.init_frames(wmFrame)
-        frame.columnconfigure(0, weight=1)
-        frame.rowconfigure(0, weight=1)
+        if init==True:
+            frame.init_frames(wmFrame)
+        # frame.columnconfigure(0, weight=1)
+        # frame.rowconfigure(0, weight=1)
         frame.grid(row=0, column=0, sticky=tk.N+tk.E+tk.W+tk.S)
+        
 
        # Place frame in the grid
     def place_frame(self, frame):

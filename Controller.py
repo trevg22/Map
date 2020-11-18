@@ -7,7 +7,8 @@ import os
 import time
 import tkinter as tk
 from colorsys import rgb_to_hls
-from tkinter import font
+from tkinter import font, ttk
+from typing import List
 
 import cartopy.crs as ccrs
 from cartopy.feature import BORDERS, COASTLINE, LAND, NaturalEarthFeature
@@ -17,11 +18,12 @@ from matplotlib.patches import Patch
 
 import settings
 from ColorFrame import ColorParentFrame
-from data_reader import Reader
+from data_reader import Reader, indepVar,simInst
 from mapFrame import MapControlFrame, MapParentFrame, MapPlotFrame
 from mapModel import mapModel
 from Polymap import CellPatch, PolygonPath
 from Response import Response
+from typing import List
 
 
 class Controller:
@@ -59,8 +61,11 @@ class Controller:
                 self.config_mapPlot(frame)
                 self.config_mapWidgets(frame.controlFrame)
 
-            if isinstance(frame, ColorParentFrame):
+            elif isinstance(frame, ColorParentFrame):
                 self.config_colorWidgets(frame)
+
+            elif isinstance(frame,MapControlFrame):
+                self.config_mapWidgets(frame) 
 
     def config_colorWidgets(self, frame):
         responsesNames = self.mapModel.get_responseNames()
@@ -73,7 +78,6 @@ class Controller:
 
     # config map widgets sliders/dropdowns
     def config_mapWidgets(self, frame):
-        simIds = self.mapModel.get_simIdList()
         resp_targs = self.mapModel.get_responseNames()
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
         timeSliderRes = 1/stepsPerDay
@@ -96,19 +100,34 @@ class Controller:
 
             if len(respName) >respNameLen:
                 respNameLen=len(respName)
-
-            targNames.append(targName)
-            respNames.append(respName)
-        print(targNames)
+            if targName not in targNames:
+                targNames.append(targName)
+            if respName not in respNames:
+                respNames.append(respName)
         frame.config_respDrop(values=respNames,width=respNameLen)
         frame.targDropDown.config(width=targNamelen)
-        frame.config_simIdDrop(values=simIds)
-        frame.set_simIdDropIndex(simIds[0])
         frame.set_respDropIndex(respNames[0]) 
         self.view.filter_drop(frame,None)
         availableTargs=frame.targDropDown.cget('values')
-        print(availableTargs[0])
         frame.targDropDown.set(list(availableTargs)[0])
+
+        # Config ind var dropdowns
+        indVars:List[indepVar]=self.mapModel.get_indepVars()
+        print("there are",len(indVars),"indep vars")
+        for var in indVars:
+            drop=ttk.Combobox(frame)
+            maxWidth=0
+            for label in var.labels:
+                if len(label) > maxWidth:
+                    maxWidth=len(label)
+            drop.config(values=var.labels,width=maxWidth)
+            drop.set(var.labels[0])
+            drop.bind("<<ComboboxSelected>>", lambda event: self.view.map_simIdDropdownChanged(frame, event))
+            frame.simIdDrops.append(drop)
+            frame.simIdLabels.append(var.name)
+            print("children packed")
+        frame.pack_children()
+        frame.grid(row=0,column=0)
 
     # config matplotlib fig/plot cellpatches
     def config_mapPlot(self, frame):
@@ -140,6 +159,7 @@ class Controller:
     # update map based on control widget values
 
     def update_map(self, frame):
+
         if isinstance(frame, MapControlFrame):
             plotFrame:MapPlotFrame = frame.get_master().get_plotFrame()
             controlFrame:MapControlFrame=frame
@@ -152,15 +172,15 @@ class Controller:
 
         vorCells = self.mapModel.get_vorCells()
         numCells = len(vorCells)
-        responses = self.responses
-        simIndex = controlFrame.get_simIdDropIndex()
+        responses = self.response
+        simIndex = self.find_currSimIndex(controlFrame) 
+        print("sim Index is",simIndex)
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
         timeStep = controlFrame.get_timeSliderVal()
         densityOn = controlFrame.get_densityToggle()
         timeIndex = round(timeStep*stepsPerDay)
 
         resp_targ=controlFrame.get_currResp_targ()
-        print("targ drop val",controlFrame.targDropDown.get())
         resp_targs=self.mapModel.get_responseNames()
         
         responseIndex = resp_targs.index(resp_targ) 
@@ -217,11 +237,26 @@ class Controller:
             patches.append(Patch(facecolor=color, label=dataThresh))
 
         location=plotFrame.legendLoc
-        plotFrame.ax.legend(handles=patches,loc=location)
+        print("location",location)
+        if location == 'none':
+           plotFrame.ax.legend().set_visible(False)
+        else:
+            plotFrame.ax.legend(handles=patches,loc=location)
         plotFrame.draw_canvas()
 
     # generate a color based on linear scaled
     # hue currently hard coded
+
+    def find_currSimIndex(self,frame:MapControlFrame):
+        simId=frame.get_simId()
+        simList:List[simInst]=self.mapModel.get_simList()
+
+        for index,sim in enumerate(simList):
+            print("comparing",sim.simPrefix,"with",simId)
+            simPrefix=''.join([str(x) for x in sim.simPrefix]) 
+            if simPrefix==simId:
+                print("sim found index",index)
+                return index
 
     # detect if the mouse has changed cell
 
@@ -280,7 +315,7 @@ class Controller:
         bFont.config(weight="bold")
         nFont = font.Font(textwidget, textwidget.cget("font"))
         textwidget.tag_configure("bold", font=bFont)
-        simIndex = controlFrame.get_simIdDropIndex()
+        simIndex = self.find_currSimIndex(controlFrame)
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
         timeStep = controlFrame.get_timeSliderVal()
 
