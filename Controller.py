@@ -18,9 +18,9 @@ from matplotlib.patches import Patch
 
 import settings
 from ColorFrame import ColorParentFrame
-from data_reader import Reader, indepVar,simInst
-from mapFrame import MapControlFrame, MapParentFrame, MapPlotFrame
-from mapModel import mapModel
+from DataReader import Reader, indepVar,simInst
+from MapFrame import MapControlFrame, MapParentFrame, MapPlotFrame
+from MapModel import MapModel
 from Polymap import CellPatch, PolygonPath
 from Response import Response
 from typing import List
@@ -29,18 +29,18 @@ from typing import List
 class Controller:
 
     def __init__(self, view):
-        self.mapModel = mapModel()
+        self.MapModel = MapModel()
         self.currCell = None
         self.selected_cell = None
         self.view = view
 
     # read in data and config widgets based on data
     def map_spinupDataSet(self, frames, mavFile):
-        self.mapModel.read_mav(mavFile)
-        self.mapModel.read_colorJson('colors.json')
+        self.MapModel.read_mav(mavFile)
+        self.MapModel.read_colorJson('colors.json')
         self.initialize_respObjs()
-        self.mapModel.create_cells()
-        vorCells = self.mapModel.get_vorCells()
+        self.MapModel.create_cells()
+        vorCells = self.MapModel.get_vorCells()
         self.create_cellPatches(vorCells)
         self.config_widgets(frames)
         
@@ -68,7 +68,7 @@ class Controller:
                 self.config_mapWidgets(frame) 
 
     def config_colorWidgets(self, frame):
-        responsesNames = self.mapModel.get_responseNames()
+        responsesNames = self.MapModel.get_responseNames()
         responses = self.responses
         frame.config_respDrop(values=responsesNames)
         frame.set_respDropIndex(responsesNames[0])
@@ -78,8 +78,8 @@ class Controller:
 
     # config map widgets sliders/dropdowns
     def config_mapWidgets(self, frame):
-        resp_targs = self.mapModel.get_responseNames()
-        timeRange, stepsPerDay = self.mapModel.get_timeParams()
+        resp_targs = self.MapModel.get_responseNames()
+        timeRange, stepsPerDay = self.MapModel.get_timeParams()
         timeSliderRes = 1/stepsPerDay
         frame.config_timeSlider(resolution=timeSliderRes, from_=timeRange[0],
                                 to=timeRange[1], digits=4)
@@ -112,7 +112,7 @@ class Controller:
         frame.targDropDown.set(list(availableTargs)[0])
 
         # Config ind var dropdowns
-        indVars:List[indepVar]=self.mapModel.get_indepVars()
+        indVars:List[indepVar]=self.MapModel.get_indepVars()
         print("there are",len(indVars),"indep vars")
         for var in indVars:
             drop=ttk.Combobox(frame)
@@ -138,7 +138,7 @@ class Controller:
         if os.path.exists(backPath):
             plotFrame.ax.imshow(imread(backPath), origin='upper', transform=ccrs.PlateCarree(),
                                 extent=[-180, 180, -90, 90])
-        cellCenters = self.mapModel.get_cellCenters()
+        cellCenters = self.MapModel.get_cellCenters()
         xrange, yrange = self.get_vorPlotLim(cellCenters)
         self.plot_cellPatches(frame)
         frame.set_plotLims(xrange, yrange)
@@ -170,26 +170,26 @@ class Controller:
 
         plotFrame.reset_patchAlphas(.3)
 
-        vorCells = self.mapModel.get_vorCells()
+        vorCells = self.MapModel.get_vorCells()
         numCells = len(vorCells)
         responses = self.responses
         simIndex = self.find_currSimIndex(controlFrame) 
         print("sim Index is",simIndex)
-        timeRange, stepsPerDay = self.mapModel.get_timeParams()
+        timeRange, stepsPerDay = self.MapModel.get_timeParams()
         timeStep = controlFrame.get_timeSliderVal()
         densityOn = controlFrame.get_densityToggle()
         timeIndex = round(timeStep*stepsPerDay)
 
         resp_targ=controlFrame.get_currResp_targ()
-        resp_targs=self.mapModel.get_responseNames()
+        resp_targs=self.MapModel.get_responseNames()
         
         responseIndex = resp_targs.index(resp_targ) 
 
         if densityOn:
-            densityMax = self.mapModel.find_normalizedMax(responseIndex)
+            densityMax = self.MapModel.find_normalizedMax(responseIndex)
 
         for cell in range(numCells):
-            data = self.mapModel.get_dataBySimTimeCellResp(
+            data = self.MapModel.get_dataBySimTimeCellResp(
                 simIndex, timeIndex, cell+1, responseIndex)
             if densityOn:
                 area = vorCells[cell].area
@@ -218,7 +218,7 @@ class Controller:
             plotFrame:MapPlotFrame=controlFrame.get_plotFrame()
 
         resp_targ=controlFrame.get_currResp_targ()
-        resp_targs=self.mapModel.get_responseNames()
+        resp_targs=self.MapModel.get_responseNames()
         responseIndex = resp_targs.index(resp_targ)
         responses = self.responses
         response = responses[responseIndex]
@@ -249,7 +249,7 @@ class Controller:
 
     def find_currSimIndex(self,frame:MapControlFrame):
         simId=frame.get_simId()
-        simList:List[simInst]=self.mapModel.get_simList()
+        simList:List[simInst]=self.MapModel.get_simList()
 
         for index,sim in enumerate(simList):
             print("comparing",sim.simPrefix,"with",simId)
@@ -263,12 +263,12 @@ class Controller:
     def mapDetect_cellChange(self, frame, event):
         if event.inaxes == frame.get_axes():
             # Check if mouse in is currCell
-            mouse_in_cell = self.mapModel.is_point_in_cell(
+            mouse_in_cell = self.MapModel.is_point_in_cell(
                 event.xdata, event.ydata, self.currCell)
             # print("Mouse in Cell", mouse_in_cell)
             if mouse_in_cell == False:
                 # find what cell mouse is in
-                self.currCell, found = self.mapModel.determine_cell_from_point(
+                self.currCell, found = self.MapModel.determine_cell_from_point(
                     event.xdata, event.ydata)
 
                 if found:
@@ -305,7 +305,7 @@ class Controller:
 
     def write_cellData(self, frame, cell):
 
-        responses = self.mapModel.get_responseNames()
+        responses = self.MapModel.get_responseNames()
         if isinstance(frame, MapPlotFrame):
             controlFrame = frame.get_controlFrame()
         currResponse = controlFrame.get_respDropIndex()
@@ -316,18 +316,18 @@ class Controller:
         nFont = font.Font(textwidget, textwidget.cget("font"))
         textwidget.tag_configure("bold", font=bFont)
         simIndex = self.find_currSimIndex(controlFrame)
-        timeRange, stepsPerDay = self.mapModel.get_timeParams()
+        timeRange, stepsPerDay = self.MapModel.get_timeParams()
         timeStep = controlFrame.get_timeSliderVal()
 
         timeIndex = round(timeStep*stepsPerDay)
         #response = controlFrame.get_respDropDownIndex()
-        vorCells = self.mapModel.get_vorCells()
+        vorCells = self.MapModel.get_vorCells()
         densityOn = controlFrame.get_densityToggle()
         scaleFac = controlFrame.get_densityScaleFac()
         cellNum = cell.get_cellNum()
         dataFrame.clear()
         for index, response in enumerate(responses):
-            data = self.mapModel.get_dataBySimTimeCellResp(
+            data = self.MapModel.get_dataBySimTimeCellResp(
                 simIndex, timeIndex, cellNum, index)
             if densityOn:
                 area = vorCells[cellNum-1].area
@@ -345,7 +345,7 @@ class Controller:
     def initialize_respObjs(self):
         default_hue = 185
         responsesNames = self.get_reponseNames()
-        simList = self.mapModel.get_simList()
+        simList = self.MapModel.get_simList()
         self.responses = []
 
         for index, name in enumerate(responsesNames):
@@ -405,7 +405,7 @@ class Controller:
         currResp.hue = prevHue
 
     def plot_cellPatches(self, frame):
-        vorCells = self.mapModel.get_vorCells()
+        vorCells = self.MapModel.get_vorCells()
         frame.plot_cellPatches(self.create_cellPatches(vorCells))
 
     def get_vorPlotLim(self, cellCenters):
@@ -419,4 +419,4 @@ class Controller:
         return [[min_x, max_x], [min_y, max_y]]
 
     def get_reponseNames(self):
-        return self.mapModel.get_responseNames()
+        return self.MapModel.get_responseNames()

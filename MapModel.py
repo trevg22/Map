@@ -11,13 +11,13 @@ import shapely
 from shapely.geometry import Point, Polygon
 from shapely.ops import polygonize
 
-from data_reader import Reader
+from DataReader import Reader
 from helpers import convPolygs84_toMerc, get_vorPolys, wgs84_toMercator, wgs84_toMercater_coords, wgs84_toMercater_poly, get_area_wgs84,moveCoords
 from Polymap import Cell
 from Response import Response, ResponseGroup
 
 
-class mapModel:
+class MapModel:
     def __init__(self):
         self.coords = None
         self.simList = None

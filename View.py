@@ -7,7 +7,7 @@ from tkinter import ttk
 
 from ColorFrame import ColorParentFrame
 from Controller import Controller
-from mapFrame import MapControlFrame, MapParentFrame, MapPlotFrame, TextFrame, MapSettingsFrame
+from MapFrame import MapControlFrame, MapParentFrame, MapPlotFrame, TextFrame, MapSettingsFrame
 import settings
 from WindowManger import WindowManager
 

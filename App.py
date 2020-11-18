@@ -4,7 +4,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-from mapFrame import MapParentFrame
+from MapFrame import MapParentFrame
 from View import View
 from WindowManger import WindowManager
 

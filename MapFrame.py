@@ -49,24 +49,24 @@ class MapParentFrame(LabelFrame):
         self.controlFrame = MapControlFrame(
             self.view, master=self, parent=self)
     
-        self.mapFrame = MapPlotFrame(
+        self.MapFrame = MapPlotFrame(
             self.view, master=self, controlFrame=self.controlFrame)
         
-        self.controlFrame.set_plotFrame(self.mapFrame)
+        self.controlFrame.set_plotFrame(self.MapFrame)
         self.pack_children()
 
     def set_master(self, inc_frame):
         self.master = inc_frame
 
     def pack_children(self):
-        pack_frame(self.mapFrame, 1, 0, sticky=True)
+        pack_frame(self.MapFrame, 1, 0, sticky=True)
         pack_frame(self.controlFrame, 0, 0)
 
     def plot_cellPatches(self, cellPatches):
-        self.mapFrame.plot_cellPatches(cellPatches)
+        self.MapFrame.plot_cellPatches(cellPatches)
 
     def set_plotLims(self, xrange, yrange):
-        self.mapFrame.set_plotLims(xrange, yrange)
+        self.MapFrame.set_plotLims(xrange, yrange)
 
     def get_timeSliderVal(self):
         pass
@@ -75,7 +75,7 @@ class MapParentFrame(LabelFrame):
         return self.controlFrame
 
     def get_plotFrame(self):
-        return self.mapFrame
+        return self.MapFrame
 
 # Frame that contains sliders and dropdowns to control map
 # May contain a reference to mapPlotFrame if self is member of MapParentFrame
