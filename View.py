@@ -8,8 +8,6 @@ from tkinter import ttk
 from ColorFrame import ColorParentFrame
 from Controller import Controller
 from mapFrame import MapControlFrame, MapParentFrame, MapPlotFrame, TextFrame, MapSettingsFrame
-from NetController import NetController
-from NetFrame import NetControlFrame, NetMapFrame, NetParentFrame
 import settings
 from WindowManger import WindowManager
 
@@ -21,7 +19,6 @@ class View:
 
     def __init__(self):
         self.mapController = Controller(self)
-        self.netController = NetController()
 
         self.frames = []
 
@@ -110,9 +107,7 @@ class View:
         self.frames.append(cFrame)
         self.mapController.config_colorWidgets(cFrame)
 
-    def spawn_network(self):
-        nFrame = NetParentFrame("network", self)
-        self.rootWm.add_frame(nFrame)
+    
 
     def spawn_controlFrame(self,WM_mode):
         cFrame=MapControlFrame(self)
@@ -174,9 +169,6 @@ class View:
             self.mapController.cell_selected(frame, event)
             print("Mouse clicked")
 
-        if isinstance(frame, NetMapFrame):
-            self.netController.point_clicked(frame, event)
-            print("controller called")
 
     def pick_test(self, frame, event):
         print(event.name)

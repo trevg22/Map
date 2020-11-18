@@ -172,7 +172,7 @@ class Controller:
 
         vorCells = self.mapModel.get_vorCells()
         numCells = len(vorCells)
-        responses = self.response
+        responses = self.responses
         simIndex = self.find_currSimIndex(controlFrame) 
         print("sim Index is",simIndex)
         timeRange, stepsPerDay = self.mapModel.get_timeParams()
