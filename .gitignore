@@ -1,3 +1,14 @@
 *.zip
 *.spec
 *.json
+*.pyc
+*.exe
+*.toc
+*.pkg
+*.pyz
+*.manifest
+*.txt
+*.html
+*.png
+*.kml
+testing/
