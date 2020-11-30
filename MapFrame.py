@@ -144,8 +144,8 @@ class MapControlFrame(Frame):
         self.packer.pack_nextCol(blankLabel)
         self.packer.pack_nextCol(respLabel)
         self.packer.pack_nextCol(targLabel)
-        self.packer.pack_nextCol(scaleFacLabel)
-        self.packer.pack_nextCol(toggleDensityLabel)
+        # self.packer.pack_nextCol(scaleFacLabel)
+        # self.packer.pack_nextCol(toggleDensityLabel)
         self.packer.pack_nextCol(settingsLabel)
         for index,drop in enumerate(self.simIdDrops):
             if index==0:
@@ -156,8 +156,8 @@ class MapControlFrame(Frame):
         self.packer.pack_nextCol(self.timeSlider)
         self.packer.pack_nextCol(self.respDropDown)
         self.packer.pack_nextCol(self.targDropDown)
-        self.packer.pack_nextCol(self.scaleFacDrop)
-        self.packer.pack_nextCol(self.toggleDensityCheck)
+        # self.packer.pack_nextCol(self.scaleFacDrop)
+        # self.packer.pack_nextCol(self.toggleDensityCheck)
         self.packer.pack_nextCol(self.settingsButton)
 
 
@@ -192,15 +192,6 @@ class MapControlFrame(Frame):
     def get_respDropIndex(self):
         return int(self.respDropDown.current())
 
-    def get_simIdDropIndex(self):
-        return int(self.simIdDropDown.current())
-
-    def get_simIdDropVal(self):
-        return str(self.simIdDropDown.get())
-
-    def get_respDropDownVal(self):
-        return str(self.respDropDown.get())
-
 
     def config_timeSlider(self, *arg, **kwargs):
         self.timeSlider.config(*arg, **kwargs)
@@ -218,8 +209,12 @@ class MapControlFrame(Frame):
     def set_respDropIndex(self, choice):
         self.respDropDown.set(choice)
 
-    def set_runDropIndex(self, choice):
-        self.simIdDropDown.set(choice)
+    def set_runDrops(self,simId):
+        if len(simId) is not len(self.simIdDrops):
+            print("snapshot simId not correct length")
+        
+        for index,drop in enumerate(self.simIdDrops):
+            drop.current(simId[len(simId)-1-index]-1)
 
     def set_plotFrame(self, frame):
         self.plotFrame = frame

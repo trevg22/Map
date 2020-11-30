@@ -2,6 +2,7 @@ import json
 import numpy as np
 from os import path
 from Response import Response, ResponseGroup
+import timeit
 # from collections import namedtuple
 # Stores list of responses at specific cell and time
 
@@ -90,6 +91,8 @@ class Reader:
 
         
     def readMav_file(self, file):
+
+        start=timeit.timeit()
         with open(file, 'r') as f:
             data = json.load(f)
 
@@ -160,6 +163,8 @@ class Reader:
 
         self.print_SimInst(self.simList)
         self.validate_data()
+        end=timeit.timeit()
+        print("data read in",end-start,"seconds")
         return self.simList
 
     def validate_data(self):

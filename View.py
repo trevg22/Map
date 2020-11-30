@@ -150,12 +150,14 @@ class View:
             self.filter_drop(frame,event)
             self.mapController.update_map(frame)
             plotFrame = frame.get_plotFrame()
+            controlFrame:MapControlFrame=frame
 
             self.mapController.update_legend(settings.numLegendEntries, frame)
             dataFrame = plotFrame.get_dataFrame()
             if dataFrame is not None:
-                dataFrame.set_currLine(frame.get_respDropDownVal())
+                dataFrame.set_currLine(controlFrame.get_currResp_targ())
                 dataFrame.view_currLine()
+                print("data line in view")
 
     # mouse moved event
 

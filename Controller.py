@@ -100,11 +100,12 @@ class Controller:
 
             if len(respName) >respNameLen:
                 respNameLen=len(respName)
+                
             if targName not in targNames:
                 targNames.append(targName)
             if respName not in respNames:
                 respNames.append(respName)
-        frame.config_respDrop(values=respNames,width=respNameLen)
+        frame.respDropDown.config(values=respNames,width=respNameLen+3)
         frame.targDropDown.config(width=targNamelen)
         frame.set_respDropIndex(respNames[0]) 
         self.view.filter_drop(frame,None)
@@ -125,6 +126,7 @@ class Controller:
             drop.bind("<<ComboboxSelected>>", lambda event: self.view.map_simIdDropdownChanged(frame, event))
             frame.simIdDrops.append(drop)
             frame.simIdLabels.append(var.name)
+            print("var name",var.name)
             print("children packed")
         frame.pack_children()
         frame.grid(row=0,column=0)
@@ -153,8 +155,6 @@ class Controller:
         plotFrame.ax.add_feature(BORDERS)
         plotFrame.ax.add_feature(
             states_provinces, edgecolor='gray', facecolor='none')
-        print("x range", xrange)
-        print("y range", yrange)
 
     # update map based on control widget values
 
@@ -174,7 +174,6 @@ class Controller:
         numCells = len(vorCells)
         responses = self.responses
         simIndex = self.find_currSimIndex(controlFrame) 
-        print("sim Index is",simIndex)
         timeRange, stepsPerDay = self.MapModel.get_timeParams()
         timeStep = controlFrame.get_timeSliderVal()
         densityOn = controlFrame.get_densityToggle()
@@ -221,15 +220,15 @@ class Controller:
         resp_targs=self.MapModel.get_responseNames()
         responseIndex = resp_targs.index(resp_targ)
         responses = self.responses
-        response = responses[responseIndex]
+        response:Response = responses[responseIndex]
         max1 = response.max
         min1 = response.min
-        lowThresh = .0001
+        lowThresh = response.smallValPerc
         patches = []
         smallVal = max1*lowThresh
 
         lowLabel = '>' + "{:.2e}".format(smallVal)
-        patches.append(Patch(facecolor=[1, 1, 0], label=lowLabel))
+        patches.append(Patch(facecolor=[1, 1, 1], label=lowLabel))
         for x in range(numThresh):
             colorThresh = ((x+1)*(max1-min1)/(numThresh))+min1
             color = response.gen_color(colorThresh)
@@ -237,7 +236,6 @@ class Controller:
             patches.append(Patch(facecolor=color, label=dataThresh))
 
         location=plotFrame.legendLoc
-        print("location",location)
         if location == 'none':
            plotFrame.ax.legend().set_visible(False)
         else:
@@ -252,10 +250,8 @@ class Controller:
         simList:List[simInst]=self.MapModel.get_simList()
 
         for index,sim in enumerate(simList):
-            print("comparing",sim.simPrefix,"with",simId)
             simPrefix=''.join([str(x) for x in sim.simPrefix]) 
             if simPrefix==simId:
-                print("sim found index",index)
                 return index
 
     # detect if the mouse has changed cell
@@ -376,8 +372,11 @@ class Controller:
             os.mkdir(snapPath)
         for snap in snapshots:
             name = snap["name"]
-            simIndex = int(snap["simIndex"])
-            response = str(snap["response"])
+            simId:List[int] = [int(x) for x in list(snap["simId"])]
+            resp_targ = str(snap["response"])
+            underInd=resp_targ.rfind('_')
+            resp=resp_targ[:underInd]
+            targ=resp_targ[underInd+1:]
             times = snap["times"]
             hue = snap["hue"]
             if "zoom" in snap:
@@ -387,9 +386,12 @@ class Controller:
 
             if "legendLoc" in snap:
                 plotFrame.legendLoc=str(snap["legendLoc"])
-            controlFrame.set_runDropIndex(simIndex)
-            respIndex = responseNames.index(response)
+            controlFrame.set_runDrops(simId)
+            respIndex = responseNames.index(resp_targ)
+
             controlFrame.set_respDropIndex(responseNames[respIndex])
+            controlFrame.respDropDown.set(resp)
+            controlFrame.targDropDown.set(targ)
             currResp = self.responses[respIndex]
             prevHue = currResp.hue
             currResp.hue = hue
@@ -399,7 +401,7 @@ class Controller:
                 controlFrame.timeSlider.set(time)
                 self.update_map(controlFrame)
                 imgName = os.path.join(snapPath, str(
-                    name)+"_"+str(simIndex)+"_"+str(response)+"_"+str(time)+".png")
+                    name)+"_"+str(simId)+"_"+str(resp_targ)+"_"+str(time)+".png")
                 plotFrame.fig.savefig(imgName, bbox_inches='tight')
 
         currResp.hue = prevHue
