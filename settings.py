@@ -1,2 +1,2 @@
-numLegendEntries=6
-defLegendLoc='lower left'
+numLegendEntries = 6
+defLegendLoc = 'lower left'

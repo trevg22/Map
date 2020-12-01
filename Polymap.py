@@ -4,12 +4,11 @@
 # polygon objects
 import colorsys
 
-from matplotlib.patches import PathPatch, Patch
-from matplotlib.path import Path
-from shapely.geometry import Polygon, Point, MultiPoint
 import matplotlib.pyplot as plt
-
+from matplotlib.patches import Patch
+from matplotlib.path import Path
 from numpy import asarray, concatenate, ones
+from shapely.geometry import Point, Polygon
 
 # function to take a "Shapely" polygon and convert to matplotlib patch
 
@@ -65,19 +64,11 @@ class CellPatch(Patch):
         return self.cell.get_cellNum()
 
     def get_cellArea(self):
-        return self.cell.get_cellArea() 
+        return self.cell.get_cellArea()
 
     def get_cellType(self):
         return self.cell.type
 
-
-class GeoCellPatch(CellPatch):
-    def __init__(self,path,cellNum,**kwargs):
-        super().__init__(self,path,cellNum,**kwargs)
-        self.geoType=""
-    
-    def set_geoType(self,type):
-        self.geom_type=type
 
 # non matplotlib cell object used in model
 
@@ -88,23 +79,17 @@ class Cell:
         self.cell = None
         self.alpha = None
         self.polygon = inc_poly
-        self.type=None
-        self.area=None
+        self.type = None
+        self.area = None
 
     def set_alpha(self, inc_alpha):
         self.alpha = inc_alpha
-
-    def set_data(self, inc_dataObj):
-        self.data = inc_dataObj
 
     def set_cell(self, cell_num):
         self.cell = cell_num
 
     def get_cellNum(self):
         return int(self.cell)
-
-    def get_data(self):
-        return self.data
 
     def get_polygon(self):
         return self.polygon

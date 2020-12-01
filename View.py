@@ -5,13 +5,14 @@ import os
 import tkinter as tk
 from tkinter import ttk
 
+import settings
 from ColorFrame import ColorParentFrame
 from Controller import Controller
-from MapFrame import MapControlFrame, MapParentFrame, MapPlotFrame, TextFrame, MapSettingsFrame
-import settings
+from MapFrame import (MapControlFrame, MapParentFrame, MapPlotFrame,
+                      MapSettingsFrame, TextFrame)
+from Response import Response
 from WindowManger import WindowManager
 
-from Response import Response
 # Main gui class that has controller member
 
 
@@ -26,9 +27,6 @@ class View:
         self.parent = parent
         self.rootWm = WindowManager(parent, self)
         self.create_menuBar(parent)
-
-    def create_dropDown(self):
-        pass
 
     # create menu bar at top
 
@@ -53,8 +51,9 @@ class View:
             label='Color', command=lambda: self.spawn_colorTool('floating'))
         floatSpawnMenu.add_command(
             label='Data Box', command=lambda: self.spawn_dataBox('floating'))
-        
-        floatSpawnMenu.add_command(label='Control Frame',command=lambda :self.spawn_controlFrame('floating'))
+
+        floatSpawnMenu.add_command(
+            label='Control Frame', command=lambda: self.spawn_controlFrame('floating'))
 
         menuBar.add_cascade(label='File', menu=fileMenu)
         editMenu = tk.Menu(menuBar, tearoff=0)
@@ -78,9 +77,9 @@ class View:
         self.mapController.config_mapWidgets(frame.controlFrame)
         self.mapController.update_map(frame)
         self.mapController.update_legend(settings.numLegendEntries, frame)
-        controlFrame:MapControlFrame=frame.get_controlFrame()
-        self.map_responseChanged(controlFrame,None) # update map for first time 
-        print("2nd added")
+        controlFrame: MapControlFrame = frame.get_controlFrame()
+        # update map for first time
+        self.map_responseChanged(controlFrame, None)
         # controlFrame.grid(row=0, column=0, sticky=tk.N+tk.E+tk.W+tk.S)
         for currFrame in self.frames:
             if isinstance(currFrame, TextFrame):
@@ -107,11 +106,9 @@ class View:
         self.frames.append(cFrame)
         self.mapController.config_colorWidgets(cFrame)
 
-    
-
-    def spawn_controlFrame(self,WM_mode):
-        cFrame=MapControlFrame(self)
-        self.rootWm.add_frame(cFrame,mode=WM_mode)
+    def spawn_controlFrame(self, WM_mode):
+        cFrame = MapControlFrame(self)
+        self.rootWm.add_frame(cFrame, mode=WM_mode)
         self.mapController.config_mapWidgets(cFrame)
 
     def spawn_plotSettings(self, parent):
@@ -147,17 +144,16 @@ class View:
             plotFrame = frame.get_plotFrame()
             dataFrame = plotFrame.get_dataFrame()
         elif isinstance(frame, MapControlFrame):
-            self.filter_drop(frame,event)
+            self.filter_drop(frame, event)
             self.mapController.update_map(frame)
             plotFrame = frame.get_plotFrame()
-            controlFrame:MapControlFrame=frame
+            controlFrame: MapControlFrame = frame
 
             self.mapController.update_legend(settings.numLegendEntries, frame)
             dataFrame = plotFrame.get_dataFrame()
             if dataFrame is not None:
                 dataFrame.set_currLine(controlFrame.get_currResp_targ())
                 dataFrame.view_currLine()
-                print("data line in view")
 
     # mouse moved event
 
@@ -169,19 +165,11 @@ class View:
     def map_mouseClicked(self, frame, event):
         if isinstance(frame, MapPlotFrame):
             self.mapController.cell_selected(frame, event)
-            print("Mouse clicked")
 
-
-    def pick_test(self, frame, event):
-        print(event.name)
-        print(event.guiEvent)
-        print("Pick Event")
-        print(event.artist)
-
-    def cell_changed(self, frame, cell):
-        pass
 
 # save button was changed on color props
+
+
     def responsePropsChanged(self, args, frame):
         responses = self.mapController.responses
         respIndex = args["responseIndex"]
@@ -199,7 +187,6 @@ class View:
 
         if "upperThresh" in args:
             curResp.upperThresh = args["upperThresh"]
-            print("upperThresh Changed ", args["upperThresh"])
         if "lowerThresh" in args:
             curResp.lowerThresh = args["lowerThresh"]
 
@@ -214,7 +201,6 @@ class View:
                 self.mapController.update_map(controlFrame)
                 self.mapController.update_legend(
                     settings.numLegendEntries, controlFrame)
-        print("response things changed")
 
     def colorResponseChanged(self, frame, event):
         responses = self.mapController.responses
@@ -225,17 +211,12 @@ class View:
 
     def densityToggled(self, frame):
         self.mapController.update_map(frame)
-        print("Toggled")
 
     def scaleFacChanged(self, frame, event):
         if isinstance(frame, MapControlFrame):
             plotframe = frame.get_plotFrame()
             cell = plotframe.get_currCell()
             self.mapController.write_cellData(plotframe, cell)
-
-    def load_mapBackground(self, file):
-        pass
-        # self.img=
 
     def save_snapShot(self):
         self.mapController.snapShot()
@@ -271,24 +252,23 @@ class View:
             self.mapController.update_legend(
                 settings.numLegendEntries, controlFrame)
 
-    def filter_drop(self,frame,event):
-        print("resp drop changed")
-        if isinstance(frame,MapControlFrame):
-            targs=[]
-            resp_targs=self.mapController.get_reponseNames()
-            respName=frame.respDropDown.get()
+    def filter_drop(self, frame, event):
+        if isinstance(frame, MapControlFrame):
+            targs = []
+            resp_targs = self.mapController.get_reponseNames()
+            respName = frame.respDropDown.get()
 
             for string in resp_targs:
                 if respName in string:
-                    underInd=string.rfind('_') 
-                    targ=string[underInd+1:]
+                    underInd = string.rfind('_')
+                    targ = string[underInd+1:]
                     if targ not in targs:
                         targs.append(targ)
-            oldTarg=frame.targDropDown.get()
+            oldTarg = frame.targDropDown.get()
             frame.targDropDown.config(values=targs)
             if oldTarg in targs:
                 frame.targDropDown.set(oldTarg)
             else:
                 frame.targDropDown.set(targs[0])
-    
+
             # self.map_responseChanged(frame,None)

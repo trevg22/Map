@@ -1,8 +1,11 @@
 import json
-import numpy as np
-from os import path
-from Response import Response, ResponseGroup
 import timeit
+from os import path
+
+import numpy as np
+
+from Response import Response
+
 # from collections import namedtuple
 # Stores list of responses at specific cell and time
 
@@ -35,19 +38,6 @@ class simInst():
         self.simGrid = [None] * len(self.timeSteps)
         self.responses = None
 
-    def processSimvars(self, simvars):
-        pass
-    # Adds dataBy_cell_time instance to correct location in grid
-
-    # def addElement(self, dataLine, cell, time):
-    #     cell = int(cell)
-    #     if self.simGrid[cell] is None:
-    #         timeArr = [None] * len(self.timeSteps)
-    #         self.simGrid[cell] = timeArr
-
-    #     timeIndex = self.timeSteps.index(time)
-    #     self.simGrid[cell][timeIndex] = dataBy_cell_time(dataLine, cell, time)
-
     def addElement(self, dataLine, cell, time, numCells):
         cell = int(cell)
         timeIndex = self.timeSteps.index(time)
@@ -56,11 +46,6 @@ class simInst():
             self.simGrid[timeIndex] = cellArr
         self.simGrid[timeIndex][cell] = dataBy_cell_time(dataLine, cell, time)
 
-        if isinstance(dataLine, int):
-            print("blah")
-
-    def set_simPrefix(self, inc_simPrefix):
-        self.simPrefix = inc_simPrefix
 
     def set_responses(self, responses):
         self.responses = responses
@@ -72,27 +57,9 @@ class simInst():
 
 class Reader:
 
-    def read_colorJson(self, file):
-        self.respGroups = {}
-        if path.exists(file):
-            with open(file, 'r') as f:
-                data = json.load(f)
-                ###
-                # Add try/catch blocks
-                for respGroup in data["groups"]:
-                    print(respGroup)
-                    name = respGroup["name"]
-                    self.respGroups[name] = ResponseGroup()
-                    self.respGroups[name].set_responses(respGroup["responses"])
-                    self.respGroups[name].set_hue(respGroup["hue"])
-                    self.respGroups[name].set_type(respGroup["type"])
-                    self.respGroups[name].set_group(respGroup['name'])
-                    print(self.respGroups[name].get_responseNames())
-
-        
     def readMav_file(self, file):
 
-        start=timeit.timeit()
+        start = timeit.timeit()
         with open(file, 'r') as f:
             data = json.load(f)
 
@@ -100,21 +67,17 @@ class Reader:
         self.simList = []
         self.timeSteps = data["map-viewer"]["variables"]["Time"]
         self.coords = data["map-viewer"]["variables"]["Cells"]
-        self.pathCells=data["map-viewer"]["variables"]["PathCells"]
-        self.pathCells=[int(cell) for cell in self.pathCells]
+        self.pathCells = data["map-viewer"]["variables"]["PathCells"]
+        self.pathCells = [int(cell) for cell in self.pathCells]
         self.pathCells.sort()
-        self.numCells=len(self.coords)
+        self.numCells = len(self.coords)
         # subtract 1 because time,cells is not part of "sim id"
         numVars = len(data["map-viewer"]["variables"]) - 3
-        print("numVars", numVars)
         self.names = list(data["map-viewer"]["variables"].keys())[:numVars]
-        print(self.names)
         self.labels = list(data["map-viewer"]["variables"].values())[:numVars]
-        print(self.labels)
 
 #        numResponses = len(data["impact-viewer"]["groups"])
         self.responses = list(data["map-viewer"]["groups"].values())
-        print("mav ran")
         # print(self.responses)
         prevSim = None
         startIndex = numVars+2
@@ -163,8 +126,8 @@ class Reader:
 
         self.print_SimInst(self.simList)
         self.validate_data()
-        end=timeit.timeit()
-        print("data read in",end-start,"seconds")
+        end = timeit.timeit()
+        print("data read in", end-start, "seconds")
         return self.simList
 
     def validate_data(self):
@@ -196,9 +159,6 @@ class Reader:
     def get_simList(self):
         return self.simList
 
-    def get_simInst(self, simId):
-        return self.simList[simId]
-
     def get_simIdList(self):
         simIds = []
         for sim in self.simList:
@@ -212,6 +172,7 @@ class Reader:
 
     def get_pathCells(self):
         return self.pathCells
+
     def get_IndVars(self):
         self.indVars = []
         if len(self.names) == len(self.labels):
@@ -222,8 +183,3 @@ class Reader:
             quit()
 
         return self.indVars
-
-    def get_respGroups(self):
-        return self.respGroups
-
-

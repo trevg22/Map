@@ -8,7 +8,7 @@ from MapFrame import MapParentFrame
 from View import View
 from WindowManger import WindowManager
 
-    
+
 def main():
     root = tk.Tk()
     root.title("Impact Map Viewer 0.0.15")

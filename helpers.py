@@ -1,13 +1,13 @@
-#Map Viewer
+# Map Viewer
 # helpers.py
-#contains helper functions not specific to a class
-import random
+# contains helper functions not specific to a class
 import math
-import matplotlib.pyplot as plt
+import random
+
 import numpy as np
-from descartes import PolygonPatch
 from scipy.spatial import Voronoi
 from shapely.geometry import Polygon
+
 
 # return a random rgba list
 def random_color(as_str=False, alpha=0.5):
@@ -21,6 +21,8 @@ def random_color(as_str=False, alpha=0.5):
         return list(np.array(rgb)/255) + [alpha]
 
 # take scipy vor and bound infinite regions
+
+
 def voronoi_finite_polygons_2d(vor, radius=None):
 
     if vor.points.shape[1] != 2:
@@ -87,6 +89,8 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 # compute Voronoi tesselation
 
 # return voronoi cell bounded by boundpoints
+
+
 def get_vorPolys(vorPoints, boundPoints):
     vor = Voronoi(vorPoints)
 
@@ -115,61 +119,70 @@ def get_vorPolys(vorPoints, boundPoints):
 
     return polygons, boundPoly
 
-def wgs84_toMercator(lon,lat):
-    x=lon
-    radLat=(lat/360)*2*math.pi
-    y=math.tan(radLat)
 
-    return (x,y)
+def wgs84_toMercator(lon, lat):
+    x = lon
+    radLat = (lat/360)*2*math.pi
+    y = math.tan(radLat)
+
+    return (x, y)
+
 
 def wgs84_toMercater_coords(coords):
 
-    return [wgs84_toMercator(coord[0],coord[1]) for coord in coords]
+    return [wgs84_toMercator(coord[0], coord[1]) for coord in coords]
+
 
 def wgs84_toMercater_poly(poly):
-    x,y=poly.exterior.coords.xy
-    coords=zip(x,y)
-    merc_coords=[wgs84_toMercator(coord[0],coord[1]) for coord in tuple(coords)]
+    x, y = poly.exterior.coords.xy
+    coords = zip(x, y)
+    merc_coords = [wgs84_toMercator(coord[0], coord[1])
+                   for coord in tuple(coords)]
     return Polygon(merc_coords)
 
+
 def convPolygs84_toMerc(polygons):
-        
+
     return [wgs84_toMercater_poly(poly) for poly in polygons]
 
-def wgs84_toCart_coords(lon,lat):
-        r=6371 #km
-        c=2*math.pi*r
-        x = lon*c/360
-        y=lat*c/180
-        return(x,y)
+
+def wgs84_toCart_coords(lon, lat):
+    r = 6371  # km
+    c = 2*math.pi*r
+    x = lon*c/360
+    y = lat*c/180
+    return(x, y)
+
 
 def wgs84_toCartesion_poly(poly):
 
-    x,y=poly.exterior.coords.xy
-    coords=zip(x,y)
-    cart_coords=[wgs84_toCart_coords(coord[0],coord[1]) for coord in tuple(coords)]
+    x, y = poly.exterior.coords.xy
+    coords = zip(x, y)
+    cart_coords = [wgs84_toCart_coords(coord[0], coord[1])
+                   for coord in tuple(coords)]
     return Polygon(cart_coords)
 
 
 def convPolygons84_toCart(polygons):
     return [wgs84_toCartesion_poly(poly) for poly in polygons]
 
+
 def get_area_wgs84(poly):
-    areaPoly=wgs84_toCartesion_poly(poly)
-    return areaPoly.area # area in km^2
+    areaPoly = wgs84_toCartesion_poly(poly)
+    return areaPoly.area  # area in km^2
 
-def moveCoords(lon_offset,lat_offset,coords):
-    
+
+def moveCoords(lon_offset, lat_offset, coords):
+
     for coord in coords:
-        newLon=coord[0]+lon_offset
+        newLon = coord[0]+lon_offset
 
-        if newLon>180:
-            newLon=newLon-360
+        if newLon > 180:
+            newLon = newLon-360
 
-        elif newLon <-180:
-            newLon=newLon+360
+        elif newLon < -180:
+            newLon = newLon+360
 
-
-        coord[0]=newLon
+        coord[0] = newLon
         # coord[0]=coord[0]+lon_offset
-        coord[1]=coord[1]+lat_offset
+        coord[1] = coord[1]+lat_offset

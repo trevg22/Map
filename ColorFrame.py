@@ -1,9 +1,11 @@
 # Map Viewer
 # ColorFrame.py
-from tkinter.ttk import LabelFrame
-from tkinter import ttk
 import tkinter as tk
+from tkinter import ttk
+from tkinter.ttk import LabelFrame
+
 from Response import Response
+
 
 class ColorParentFrame(LabelFrame):
 
@@ -19,10 +21,10 @@ class ColorParentFrame(LabelFrame):
         self.maxEntry = ttk.Entry(self)
         self.minEntry = ttk.Entry(self)
         self.saveButton = ttk.Button(self, text="Save")
-        self.updateButton=ttk.Button(self,text='Update All')
-        self.upperThreshEntry=ttk.Entry(self)
-        self.lowerThreshEntry=ttk.Entry(self)
-        self.smallValPercEntry=ttk.Entry(self)
+        self.updateButton = ttk.Button(self, text='Update All')
+        self.upperThreshEntry = ttk.Entry(self)
+        self.lowerThreshEntry = ttk.Entry(self)
+        self.smallValPercEntry = ttk.Entry(self)
         self.config_widgetDefaults()
         self.pack_children()
 
@@ -31,9 +33,9 @@ class ColorParentFrame(LabelFrame):
         hueLabel = ttk.Label(self, text="Hue")
         maxLabel = ttk.Label(self, text="Max")
         minLabel = ttk.Label(self, text="Min")
-        lowerThreshLabel=ttk.Label(self,text="Low Thresh 0<=x<=1")
-        upperThreshLabel=ttk.Label(self,text="Upper Thresh 0<=x<=1")
-        smallValLabel=ttk.Label(self,text="low val %")
+        lowerThreshLabel = ttk.Label(self, text="Low Thresh 0<=x<=1")
+        upperThreshLabel = ttk.Label(self, text="Upper Thresh 0<=x<=1")
+        smallValLabel = ttk.Label(self, text="low val %")
         self.respDropDown.grid(row=0, column=1)
         respLabel.grid(row=0, column=0)
         self.hueEntry.grid(row=1, column=1)
@@ -43,14 +45,14 @@ class ColorParentFrame(LabelFrame):
         self.minEntry.grid(row=3, column=1)
         minLabel.grid(row=3, column=0)
         self.saveButton.grid(row=4, column=1)
-        self.updateButton.grid(row=4,column=0)
+        self.updateButton.grid(row=4, column=0)
 
-        self.upperThreshEntry.grid(row=1,column=3)
-        upperThreshLabel.grid(row=1,column=4)
-        self.lowerThreshEntry.grid(row=2,column=3)
-        lowerThreshLabel.grid(row=2,column=4)
-        self.smallValPercEntry.grid(row=3,column=3)
-        smallValLabel.grid(row=3,column=4)
+        self.upperThreshEntry.grid(row=1, column=3)
+        upperThreshLabel.grid(row=1, column=4)
+        self.lowerThreshEntry.grid(row=2, column=3)
+        lowerThreshLabel.grid(row=2, column=4)
+        self.smallValPercEntry.grid(row=3, column=3)
+        smallValLabel.grid(row=3, column=4)
 
     def savePressed(self):
         args = {}
@@ -60,55 +62,55 @@ class ColorParentFrame(LabelFrame):
         maxVal = self.maxEntry.get()
         minVal = self.minEntry.get()
         hue = self.hueEntry.get()
-        upperThresh=self.upperThreshEntry.get()
-        lowerThresh=self.lowerThreshEntry.get()
-        smallValPerc=self.smallValPercEntry.get()
+        upperThresh = self.upperThreshEntry.get()
+        lowerThresh = self.lowerThreshEntry.get()
+        smallValPerc = self.smallValPercEntry.get()
         try:
             float(maxVal)
             args["maxVal"] = float(maxVal)
         except ValueError:
-            self.not_float("max val",maxVal)
+            self.not_float("max val", maxVal)
         try:
             float(minVal)
             args["minVal"] = float(minVal)
 
         except ValueError:
-           self.not_float("min val",minVal) 
+            self.not_float("min val", minVal)
 
         try:
             float(hue)
             args["hue"] = float(hue)
         except ValueError:
-            self.not_float("hue",hue)
+            self.not_float("hue", hue)
         try:
             float(upperThresh)
-            args["upperThresh"]=float(upperThresh)
+            args["upperThresh"] = float(upperThresh)
         except ValueError:
-            self.not_float("upper threshold",upperThresh)
-        
+            self.not_float("upper threshold", upperThresh)
+
         try:
             float(lowerThresh)
-            args["lowerThresh"]=float(lowerThresh)
+            args["lowerThresh"] = float(lowerThresh)
         except ValueError:
-            self.not_float("lower threshold",lowerThresh)
+            self.not_float("lower threshold", lowerThresh)
 
         try:
             float(smallValPerc)
-            args["smallValPerc"]=float(smallValPerc)
+            args["smallValPerc"] = float(smallValPerc)
         except ValueError:
-            self.not_float("small value %",smallValPerc)
+            self.not_float("small value %", smallValPerc)
         self.view.responsePropsChanged(args, self)
 
-    def not_float(self,varName,entryVal):
-        print(varName,"entry of",entryVal,"is not a float")
+    def not_float(self, varName, entryVal):
+        print(varName, "entry of", entryVal, "is not a float")
 
     def updateAll_pressed(self):
         self.savePressed()
-        
+
         responseInd = int(self.respDropDown.current())
         self.view.updateAll_respProps(responseInd)
 
-    def update_entrys(self,currResp:Response):
+    def update_entrys(self, currResp: Response):
 
         self.maxEntry.delete(0, tk.END)
         self.minEntry.delete(0, tk.END)
@@ -116,12 +118,12 @@ class ColorParentFrame(LabelFrame):
         self.minEntry.insert(0, str(currResp.min))
         self.hueEntry.delete(0, tk.END)
         self.hueEntry.insert(0, str(currResp.hue))
-        self.upperThreshEntry.delete(0,tk.END)
-        self.upperThreshEntry.insert(0,str(currResp.upperThresh))
-        self.lowerThreshEntry.delete(0,tk.END)
-        self.lowerThreshEntry.insert(0,str(currResp.lowerThresh))
-        self.smallValPercEntry.delete(0,tk.END)
-        self.smallValPercEntry.insert(0,str(currResp.smallValPerc))
+        self.upperThreshEntry.delete(0, tk.END)
+        self.upperThreshEntry.insert(0, str(currResp.upperThresh))
+        self.lowerThreshEntry.delete(0, tk.END)
+        self.lowerThreshEntry.insert(0, str(currResp.lowerThresh))
+        self.smallValPercEntry.delete(0, tk.END)
+        self.smallValPercEntry.insert(0, str(currResp.smallValPerc))
 
     def config_widgetDefaults(self):
         self.saveButton.config(command=self.savePressed)
@@ -131,15 +133,6 @@ class ColorParentFrame(LabelFrame):
 
     def config_respDrop(self, *args, **kwargs):
         self.respDropDown.config(*args, **kwargs)
-
-    def config_maxEntry(self, *args, **kwargs):
-        self.maxEntry.config(*args, **kwargs)
-
-    def config_minValEntry(self, *args, **kwargs):
-        self.minEntry.config(*args, **kwargs)
-
-    def config_saveButton(self, *args, **kwargs):
-        self.saveButton.config(*args, **kwargs)
 
     def set_respDropIndex(self, index):
         self.respDropDown.set(index)

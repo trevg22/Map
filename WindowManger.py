@@ -1,5 +1,6 @@
-from tkinter import ttk
 import tkinter as tk
+from tkinter import ttk
+
 # Grid window manager
 # Accepts ttk.frame child objects with init_frames method
 
@@ -8,7 +9,6 @@ class WindowManager:
     def __init__(self, inc_frame, view):
         self.parentFrame = inc_frame
         self.frameList = []
-        self.maxRows = 2
         self.maxCols = 3
         self.numFrames = 0
         self.view = view
@@ -16,31 +16,31 @@ class WindowManager:
         # self.parentFrame.columnconfigure(0, weight=1)
 
     # Add frame to the windowmanager and grid
-    def add_frame(self, frame,mode=None,stick=False,init=True):
+    def add_frame(self, frame, mode=None, init=True):
 
         if mode is None or mode is "grid":
             wmFrame = ttk.Frame(self.parentFrame)
-            style=ttk.Style()
+            # style=ttk.Style()
             # style.configure('TFrame',background='green')
             wmFrame.rowconfigure(0, weight=1)
             wmFrame.columnconfigure(0, weight=1)
             self.place_frame(wmFrame)
 
         elif mode is "floating":
-            wmFrame=tk.Toplevel(self.parentFrame)
+            wmFrame = tk.Toplevel(self.parentFrame)
             # Add 'x' button to outer frame owned by manager
         button = ttk.Button(wmFrame, text='x', width=3,
                             command=lambda: self.delete_frame(wmFrame))
         self.frameList.append(wmFrame)
         button.grid(row=0, column=1, sticky=tk.N+tk.E)
-        if init==True:
+        if init == True:
             frame.init_frames(wmFrame)
         # frame.columnconfigure(0, weight=1)
         # frame.rowconfigure(0, weight=1)
         frame.grid(row=0, column=0, sticky=tk.N+tk.E+tk.W+tk.S)
-        
 
        # Place frame in the grid
+
     def place_frame(self, frame):
         self.numFrames += 1
         frameRow = int((self.numFrames-1)/self.maxCols)
@@ -64,12 +64,3 @@ class WindowManager:
 
         for frame in self.frameList:
             self.place_frame(frame)
-
-    # print widgets located inside manager parent frame
-    def print_parentInfor(self):
-
-        print("widgets in parent frame")
-        for widget in self.parentFrame.winfo_children():
-            print(widget)
-            print(widget.winfo_x(), widget.winfo_y())
-            print("parent", widget.winfo_parent())
