@@ -102,3 +102,4 @@ class Response:
     def gen_color(self, data):
         if self.type == "linear":
             return self.gen_colorLinear(data)
+

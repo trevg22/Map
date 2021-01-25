@@ -25,14 +25,13 @@ class WindowManager:
             wmFrame.rowconfigure(0, weight=1)
             wmFrame.columnconfigure(0, weight=1)
             self.place_frame(wmFrame)
+            quitButton = ttk.Button(wmFrame, text='x', width=3,
+                            command=lambda: self.delete_frame(wmFrame))
+            quitButton.grid(row=0, column=1, sticky=tk.N+tk.E)
 
         elif mode is "floating":
             wmFrame = tk.Toplevel(self.parentFrame)
-            # Add 'x' button to outer frame owned by manager
-        button = ttk.Button(wmFrame, text='x', width=3,
-                            command=lambda: self.delete_frame(wmFrame))
         self.frameList.append(wmFrame)
-        button.grid(row=0, column=1, sticky=tk.N+tk.E)
         if init == True:
             frame.init_frames(wmFrame)
         # frame.columnconfigure(0, weight=1)
@@ -50,7 +49,6 @@ class WindowManager:
     # destroy frame and remove frame
     # repack remaining frames
     def delete_frame(self, frame):
-        print("frame deleted")
         self.frameList.remove(frame)
         self.view.remove_frame(frame)
         frame.destroy()

@@ -17,7 +17,7 @@ from matplotlib.patches import Patch
 import settings
 from ColorFrame import ColorParentFrame
 from DataReader import Reader, indepVar, simInst
-from MapFrame import MapControlFrame, MapParentFrame, MapPlotFrame
+from MapFrame import MapControlFrame, MapParentFrame, MapPlotFrame, TextFrame
 from MapModel import MapModel
 from Polymap import CellPatch, PolygonPath
 from Response import Response
@@ -277,47 +277,66 @@ class Controller:
         frame.set_currCell(artist)
 
         if frame.get_dataFrame() is not None:
-            self.write_cellData(frame, artist)
+            self.write_cellData(frame)
         frame.draw_canvas()
     # write data box if cell is selected
 
-    def write_cellData(self, frame, cell):
-
-        responses = self.MapModel.get_responseNames()
+    def write_cellData(self, frame):
         if isinstance(frame, MapPlotFrame):
             controlFrame = frame.get_controlFrame()
-        dataFrame = frame.get_dataFrame()
-        textwidget = dataFrame.textBox
-        bFont = font.Font(textwidget, textwidget.cget("font"))
-        bFont.config(weight="bold")
-        # nFont = font.Font(textwidget, textwidget.cget("font"))
-        textwidget.tag_configure("bold", font=bFont)
-        simIndex = self.find_currSimIndex(controlFrame)
-        stepsPerDay = self.MapModel.get_timeParams()[1]
-        timeStep = controlFrame.get_timeSliderVal()
+            cell=frame.get_currCell()
+        dataFrame:TextFrame = frame.get_dataFrame()
+        if dataFrame is not None:
+            responses = self.MapModel.get_responseNames()
+            resp_targ=controlFrame.get_currResp_targ()
+            dataFrame.plotFrame=frame
+            textwidget = dataFrame.textBox
+            bFont = font.Font(textwidget, textwidget.cget("font"))
+            bFont.config(weight="bold")
+            # nFont = font.Font(textwidget, textwidget.cget("font"))
+            textwidget.tag_configure("bold", font=bFont)
+            simIndex = self.find_currSimIndex(controlFrame)
+            stepsPerDay = self.MapModel.get_timeParams()[1]
+            timeStep = controlFrame.get_timeSliderVal()
 
-        timeIndex = round(timeStep*stepsPerDay)
-        #response = controlFrame.get_respDropDownIndex()
-        vorCells = self.MapModel.get_vorCells()
-        densityOn = controlFrame.get_densityToggle()
-        scaleFac = controlFrame.get_densityScaleFac()
-        cellNum = cell.get_cellNum()
-        dataFrame.clear()
-        for index, response in enumerate(responses):
-            data = self.MapModel.get_dataBySimTimeCellResp(
-                simIndex, timeIndex, cellNum, index)
-            if densityOn:
-                area = vorCells[cellNum-1].area
-                data = (data*scaleFac)/area
-            dataLine = response+": "+"{0:.2f}".format(data)+"\n"
-            # if index==currResponse:
-            #     print("should be bold")
-            #     textwidget.config(font=bFont)
-            # else:
-            #     textwidget.config(font=nFont)
-            textwidget.insert(tk.END, dataLine)
-        dataFrame.view_currLine()
-        dataFrame.write_selectedLabel(cell)
+            timeIndex = round(timeStep*stepsPerDay)
+            #response = controlFrame.get_respDropDownIndex()
+            vorCells = self.MapModel.get_vorCells()
+            densityOn = controlFrame.get_densityToggle()
+            scaleFac = controlFrame.get_densityScaleFac()
+            cellNum = cell.get_cellNum()
+            dataFrame.clear()
+
+            filterStr=""
+            underPos=resp_targ.find('_')
+            if dataFrame.modeDrop.get() == 'Single':
+                filterStr=resp_targ
+            
+            elif dataFrame.modeDrop.get() =='Response':
+                filterStr=resp_targ[:underPos]
+
+            elif dataFrame.modeDrop.get()=='Target':
+                filterStr=resp_targ[underPos:]
+
+            for index, response in enumerate(responses):
+                data = self.MapModel.get_dataBySimTimeCellResp(
+                    simIndex, timeIndex, cellNum, index)
+                if densityOn:
+                    area = vorCells[cellNum-1].area
+                    data = (data*scaleFac)/area
+
+                dataLine = response+": "+"{0:.2f}".format(data)+"\n"
+                if response == resp_targ:
+                    textwidget.insert('1.0',dataLine)
+                elif filterStr in response:
+                # if index==currResponse:
+                #     print("should be bold")
+                #     textwidget.config(font=bFont)
+                # else:
+                #     textwidget.config(font=nFont)
+                    textwidget.insert(tk.END, dataLine)
+            dataFrame.view_currLine()
+            dataFrame.write_selectedLabel(cell)
 
     def initialize_respObjs(self):
         default_hue = 185

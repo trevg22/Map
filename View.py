@@ -132,10 +132,16 @@ class View:
 
     def map_timeSliderReleased(self, frame, event):
         self.mapController.update_map(frame)
+        plotFrame=frame.get_plotFrame()
+        self.mapController.write_cellData(plotFrame)
+        
 
     # event capture for sim Id drop down
     def map_simIdDropdownChanged(self, frame, event):
         self.mapController.update_map(frame)
+        plotFrame=frame.get_plotFrame()
+        self.mapController.write_cellData(plotFrame)
+
 
     # event capture for response drop down
     def map_responseChanged(self, frame, event):
@@ -152,6 +158,7 @@ class View:
             self.mapController.update_legend(settings.numLegendEntries, frame)
             dataFrame = plotFrame.get_dataFrame()
             if dataFrame is not None:
+                self.mapController.write_cellData(plotFrame)
                 dataFrame.set_currLine(controlFrame.get_currResp_targ())
                 dataFrame.view_currLine()
 
@@ -215,8 +222,7 @@ class View:
     def scaleFacChanged(self, frame, event):
         if isinstance(frame, MapControlFrame):
             plotframe = frame.get_plotFrame()
-            cell = plotframe.get_currCell()
-            self.mapController.write_cellData(plotframe, cell)
+            self.mapController.write_cellData(plotframe)
 
     def save_snapShot(self):
         self.mapController.snapShot()
@@ -272,3 +278,6 @@ class View:
                 frame.targDropDown.set(targs[0])
 
             # self.map_responseChanged(frame,None)
+
+    def dataBoxMode_changed(self,event,frame:MapPlotFrame):
+        self.mapController.write_cellData(frame)

@@ -169,7 +169,6 @@ class MapControlFrame(Frame):
 
     def get_simId(self):
         simId = ""
-        print("num drops", len(self.simIdDrops))
         for drop in self.simIdDrops:
             simId = simId+str(drop.current()+1)
         return simId
@@ -311,9 +310,10 @@ class TextFrame(LabelFrame):
         self.label = label
         self.parent = parent
         self.view = view
+        self._plotFrame=None
         if master is not None:
             pass
-            #super().__init__(master, text=label)
+            # super().__init__(master, text=label)
 
     def init_frames(self, master):
         super().__init__(master, text=self.label)
@@ -322,15 +322,28 @@ class TextFrame(LabelFrame):
         self.hovLabel = ttk.Label(self, text="Hovered: ")
         self.modeLabel = ttk.Label(self, text="Mode")
         self.modeDrop = ttk.Combobox(self)
+        self.config_widgets()
         self.pack_children()
 
     def pack_children(self):
-        self.textBox.grid(row=2, column=0)
-        self.hovLabel.grid(row=0, column=0)
-        self.selLabel.grid(row=1, column=0)
+        self.textBox.grid(row=3, column=0, columnspan=2)
+        self.hovLabel.grid(row=0, column=0, columnspan=2)
+        self.selLabel.grid(row=1, column=0, columnspan=2)
+        self.modeLabel.grid(row=2, column=0)
+        self.modeDrop.grid(row=2, column=1)
 
     def config_widgets(self):
-        pass
+        options = ["Single", "Response", "Target"]
+        maxWidth = 0
+
+        for option in options:
+            if len(options) > maxWidth:
+                maxWidth = len(option)
+        self.modeDrop.config(values=options, width=maxWidth+1)
+        self.modeDrop.set('Single')
+        self.modeDrop.bind(
+            "<<ComboboxSelected>>",lambda event: self.view.dataBoxMode_changed(event,self.plotFrame))
+
     # clear text box
 
     def clear(self):
@@ -362,6 +375,14 @@ class TextFrame(LabelFrame):
             "\n Area " + "{0:.2f}".format(area)+" km^2"
 
         self.selLabel.config(text=text)
+
+    @property
+    def plotFrame(self):
+        return self._plotFrame
+    
+    @plotFrame.setter
+    def plotFrame(self, frame):
+        self._plotFrame = frame
 
     def set_parent(self, parent):
         self.parent = parent
