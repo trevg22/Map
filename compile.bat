@@ -1,1 +1,1 @@
-pyinstaller --onefile MapFrame.py ColorFrame.py Response.py Polymap.py WindowManger.py helpers.py DataReader.py MapModel.py Controller.py View.py App.py 
+pyinstaller --onefile -n MapViewer AppMenu.py WxFrames.py settingsPanel.py  Response.py Polymap.py helpers.py DataReader.py MapModel.py Controller.py WxView.py App.py 

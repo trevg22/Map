@@ -5,159 +5,176 @@ import os
 import tkinter as tk
 from tkinter import ttk
 import wx
-from Frames.WxFrames import WxFrame,MapControlPanel,MapParentPanel,MapPlotPanel,MapdataPanel
-
+from Frames.WxFrames import MapControlPanel, MapParentPanel, MapPlotPanel, MapdataPanel
+from settingsPanel import colorPanel,SettingsNotebook
 import settings
-from ColorFrame import ColorParentFrame
 from Controller import Controller
-from MapFrame import (MapControlFrame, MapParentFrame, MapPlotFrame,
-                      MapSettingsFrame, TextFrame)
 from Response import Response
 from WindowManger import WindowManager
+from settingsPanel import colorPanel
+from AppMenu import AppMenu
 
 # Main gui class that has controller member
 
 
-class View:
+class View(wx.Frame):
 
     def __init__(self):
+        # super().__init__(wx.ID_ANY,"Map Viewer",size=(500,500))
+        super().__init__(None,size=(500,500))
         self.mapController = Controller(self)
 
         self.frames = []
-        self.panels=[]
+        self.panels = []
 
-    def init_mainWindow(self ):
-        
-        frame=WxFrame(None)
-        self.spinup_mapDataSet()
+    def init_mainWindow(self):
+
+        frame = self
+        menuBar=AppMenu(frame,self)
+        self.spinup_mapDataSet(None)
         self.spawn_mapPanel(frame)
-        self.spawn_dataPanel()
+        # self.spawn_dataPanel()
         # self.spawn_plotPanel(frame)
         print("spawned")
         frame.Show()
     # create menu bar at top
-    
-    def spawn_controlPanel(self,parent):
-        panel=MapControlPanel(parent,self)
+
+    def spawn_controlPanel(self, parent):
+        panel = MapControlPanel(parent, self)
 
     def spawn_dataPanel(self):
-        frame=WxFrame(None)
-        dataPanel=MapdataPanel(frame,self)
-        hSizer=wx.BoxSizer(wx.HORIZONTAL)
-        vSizer=wx.BoxSizer(wx.VERTICAL)
-        hSizer.Add(dataPanel,1,1,20)
-        vSizer.Add(hSizer,1,1,20)
+        frame = wx.Frame(None)
+        dataPanel = MapdataPanel(frame, self)
+        hSizer = wx.BoxSizer(wx.HORIZONTAL)
+        vSizer = wx.BoxSizer(wx.VERTICAL)
+        hSizer.Add(dataPanel, 1, 1, 20)
+        vSizer.Add(hSizer, 1, 1, 20)
         frame.SetSizer(vSizer)
         frame.Show()
 
         for panel in self.panels:
-            if isinstance(panel,MapParentPanel):
-                panel.plotPanel.dataPanel=dataPanel
+            if isinstance(panel, MapParentPanel):
+                panel.plotPanel.dataPanel = dataPanel
+                dataPanel.plotPanel = panel.plotPanel
         self.panels.append(panel)
 
-    def spawn_mapPanel(self,parent):
-        parPanel=MapParentPanel(parent,self)
+    def spawn_settingsPanel(self, controlPanel):
+        frame = wx.Frame(None)
+
+        noteBook = SettingsNotebook(self)
+        controlPanel.settingsNotebook=noteBook
+        #settingsNotebook = wx.Notebook()
+        noteBook.Create(frame)
+        noteBook.OnCreate(None)
+        noteBook.controlPanel = controlPanel
+        self.mapController.config_settingsNoteBook(
+            noteBook, controlPanel)
+        noteBook.Reparent(frame)
+        hSizer = wx.BoxSizer(wx.HORIZONTAL)
+        vSizer = wx.BoxSizer(wx.VERTICAL)
+        hSizer.Add(noteBook, 0, 1, 20)
+        vSizer.Add(hSizer, 0, 1, 20)
+        frame.SetSizer(vSizer)
+        frame.Show()
+
+    def spawn_mapPanel(self, parent):
+        parPanel = MapParentPanel(parent, self)
         self.panels.append(parPanel)
-        plotPanel=parPanel.plotPanel
-        controlPanel=parPanel.controlPanel
+        plotPanel = parPanel.plotPanel
+        controlPanel = parPanel.controlPanel
         # frame = MapParentFrame("Map", self)
         self.mapController.plot_cellPatches(plotPanel)
         self.mapController.config_mapPlot(parPanel)
         self.mapController.config_controlWidgets(controlPanel)
         self.mapController.update_map(parPanel)
-        self.mapController.update_legend(settings.numLegendEntries, parPanel)
+        self.mapController.update_legend(parPanel)
         # controlFrame: MapControlFrame = frame.get_controlFrame()
         # update map for first time
         # self.map_responseChanged(controlFrame, None)
 
-    def spawn_plotPanel(self,parent):
-        panel=MapPlotPanel(parent)
+    def spawn_plotPanel(self, parent):
+        panel = MapPlotPanel(parent)
 
-    
-    def spawn_map(self, WM_mode):
-        frame = MapParentFrame("Map", self)
-        self.rootWm.add_frame(frame, mode=WM_mode)
-        self.frames.append(frame)
-        self.mapController.plot_cellPatches(frame)
-        self.mapController.config_mapPlot(frame)
-        self.mapController.config_mapWidgets(frame.controlFrame)
-        self.mapController.update_map(frame)
-        self.mapController.update_legend(settings.numLegendEntries, frame)
-        controlFrame: MapControlFrame = frame.get_controlFrame()
-        # update map for first time
-        self.map_responseChanged(controlFrame, None)
-        # controlFrame.grid(row=0, column=0, sticky=tk.N+tk.E+tk.W+tk.S)
-        for currFrame in self.frames:
-            if isinstance(currFrame, TextFrame):
-                plotFrame = frame.get_plotFrame()
-                plotFrame.set_dataFrame(currFrame)
 
-    # create dataBox and pass to window manager
-
-    
-    def spawn_colorTool(self, WM_mode):
-        cFrame = ColorParentFrame("Color", self)
-        self.rootWm.add_frame(cFrame, mode=WM_mode)
-        self.frames.append(cFrame)
-        self.mapController.config_colorWidgets(cFrame)
-
-    def spawn_controlFrame(self, WM_mode):
-        cFrame = MapControlFrame(self)
-        self.rootWm.add_frame(cFrame, mode=WM_mode)
-        self.mapController.config_mapWidgets(cFrame)
-
-    def spawn_plotSettings(self, parent):
-        sFrame: MapSettingsFrame = MapSettingsFrame('Plot Settings', self)
-        sFrame.parent = parent
-        self.rootWm.add_frame(sFrame, mode='floating')
-
-    # remove frame from view
-    def remove_frame(self, frame):
-        for child in frame.winfo_children():
-            if child in self.frames:
-                self.frames.remove(child)
-
-    def spinup_mapDataSet(self):
+    def spinup_mapDataSet(self,event):
         cwd = os.getcwd()
-        cwd='C:/Users/trevor.griggs/Dev/projects/map-viewer/mav/'
-        # dataFile = tk.filedialog.askopenfilename(initialdir=cwd)
-        dataFile=os.path.join(cwd,'BRc1-mav-1120EAf-0_5-4.json')
+
+
+        with wx.FileDialog(self, "Open json file",defaultDir=cwd, 
+                       style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return     # the user changed their mind
+
+            pathname = fileDialog.GetPath()
+            try:
+                with open(pathname, 'r') as file:
+                    pass
+            except IOError:
+                wx.LogError("Cannot open file '%s'." % newfile)
+
+            dataFile = os.path.join(cwd, 'mavTest')
 
         # self.parent.title(self.parent.title()+" -> "+dataFile)
 
-        self.mapController.map_spinupDataSet(self.panels, dataFile)
+            self.mapController.map_spinupDataSet(self.panels, dataFile)
 
     # event capture for time slider
 
     def map_timeSliderReleased(self, frame, event):
         self.mapController.update_map(frame)
-        
 
     # event capture for sim Id drop down
+
     def map_simIdDropdownChanged(self, panel, event):
         self.mapController.update_map(panel)
-        plotPanel=panel.plotPanel
-
+        plotPanel = panel.plotPanel
 
     # event capture for response drop down
+
     def map_responseChanged(self, panel, event):
 
-        if isinstance(frame, MapParentFrame):
-            plotFrame = frame.get_plotFrame()
-            dataFrame = plotFrame.get_dataFrame()
-        elif isinstance(frame, MapControlFrame):
-            self.mapController.update_map(frame)
-            # plotFrame = frame.get_plotFrame()
-            # controlFrame: MapControlFrame = frame
+        if isinstance(panel, MapParentPanel):
+            plotFrame = panel.plotPanel
+            dataFrame = plotPanel.dataPanel
+        elif isinstance(panel, MapControlPanel):
+            self.mapController.update_map(panel)
+            controlPanel = panel
+            plotPanel = panel.plotPanel
+            dataPanel = plotPanel.dataPanel
 
-            self.mapController.update_legend(settings.numLegendEntries, frame)
-            dataFrame = plotFrame.get_dataFrame()
-            # if dataFrame is not None:
-                # self.mapController.write_cellData(plotFrame)
-                # dataFrame.set_currLine(controlFrame.get_currResp_targ())
-                # dataFrame.view_currLine()
+            self.mapController.update_legend(
+                controlPanel)
+            responses = self.mapController.responses
+            resp_targ = controlPanel.resp_targ
+            currResp = responses[resp_targ]
 
+            print("response changed")
+            if dataPanel is not None:
+                self.mapController.write_cellData(plotPanel)
+
+    def update_map(self, panel):
+        if isinstance(panel, colorPanel):
+            updatePanel = panel.controlPanel
+        self.mapController.update_map(updatePanel)
+        self.mapController.update_legend(
+            updatePanel)
+
+    def update_legend(self,panel):
+        self.mapController.update_legend(panel)
     # mouse moved event
+
+    def settings_handler(self, params, func):
+        print("settings handled")
+        print(params)
+        if "response" in params:
+            resp = self.mapController.responses[params["response"]]
+            func(resp)
+
+        elif "plotPanel" in params:
+            plotPanel=params["plotPanel"].plotPanel
+            func(plotPanel)
+            print("handled")
 
     def map_mouseMoved(self, panel, event):
         if panel.dataPanel is not None:
@@ -168,94 +185,17 @@ class View:
         if isinstance(panel, MapPlotPanel):
             self.mapController.cell_selected(panel, event)
 
+    def write_cellData(self, panel, event):
+        self.mapController.write_cellData(panel)
 
 # save button was changed on color props
-
-
-    def responsePropsChanged(self, args, frame):
-        responses = self.mapController.responses
-        respIndex = args["responseIndex"]
-
-        curResp: Response = responses[respIndex]
-
-        if "maxVal" in args:
-            curResp.max = args["maxVal"]
-
-        if "minVal" in args:
-            curResp.min = args["minVal"]
-
-        if "hue" in args:
-            curResp.hue = args["hue"]
-
-        if "upperThresh" in args:
-            curResp.upperThresh = args["upperThresh"]
-        if "lowerThresh" in args:
-            curResp.lowerThresh = args["lowerThresh"]
-
-        if "smallValPerc" in args:
-            curResp.smallValPerc = args["smallValPerc"]
-
-        frame.update_entrys(curResp)
-
-        for loopFrame in self.frames:
-            if isinstance(loopFrame, MapParentFrame):
-                controlFrame = loopFrame.get_controlFrame()
-                self.mapController.update_map(controlFrame)
-                self.mapController.update_legend(
-                    settings.numLegendEntries, controlFrame)
-
-    def colorResponseChanged(self, frame, event):
-        responses = self.mapController.responses
-        responseIndex = frame.get_respDropIndex()
-
-        curResp: Response = responses[responseIndex]
-        frame.update_entrys(curResp)
-
-    def densityToggled(self, frame):
-        self.mapController.update_map(frame)
-
-    def scaleFacChanged(self, frame, event):
-        if isinstance(frame, MapControlFrame):
-            plotframe = frame.get_plotFrame()
-            self.mapController.write_cellData(plotframe)
 
     def save_snapShot(self):
         self.mapController.snapShot()
 
-    def updateAll_respProps(self, curRespInd):
-        responses = self.mapController.responses
-        curResp = responses[curRespInd]
-
-        for resp in responses:
-            resp.hue = curResp.hue
-            resp.upperThresh = curResp.upperThresh
-            resp.lowerThresh = curResp.lowerThresh
-            resp.smallValPerc = curResp.smallValPerc
-
-        self.update_mapParentFrames()
-
-    def update_mapParentFrames(self):
-
-        for frame in self.frames:
-            if isinstance(frame, MapParentFrame):
-                self.mapController.update_map(frame)
-                self.mapController.update_legend(
-                    settings.numLegendEntries, frame)
-
-    def plotSettings_changed(self, args, frame):
-
-        if isinstance(frame, MapParentFrame):
-            plotFrame: MapPlotFrame = frame.get_plotFrame()
-            controlFrame: MapControlFrame = frame.get_controlFrame()
-
-        if "legendLoc" in args:
-            plotFrame.legendLoc = args["legendLoc"]
-            self.mapController.update_legend(
-                settings.numLegendEntries, controlFrame)
-
     def filter_drop(self, panel, event):
         print("drop filtered")
-        if isinstance(panel, MapControlPanel):
+        if isinstance(panel, MapControlPanel) or isinstance(panel, colorPanel):
             targs = []
             resp_targs = self.mapController.get_reponseNames()
             respName = panel.respDrop.GetStringSelection()
@@ -275,6 +215,3 @@ class View:
                 panel.tgtDrop.SetSelection(0)
 
             # self.map_responseChanged(frame,None)
-
-    def dataBoxMode_changed(self,event,frame:MapPlotFrame):
-        self.mapController.write_cellData(frame)

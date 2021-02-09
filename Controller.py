@@ -2,11 +2,13 @@
 # Class to interface directly with model
 # and impliment some view functionality
 import colorsys
+from matplotlib import cm
 import json
 import os
 import time
 import tkinter as tk
 from tkinter import font, ttk
+import wx
 from typing import List
 
 import cartopy.crs as ccrs
@@ -18,6 +20,7 @@ import settings
 from ColorFrame import ColorParentFrame
 from DataReader import Reader, indepVar, simInst
 from MapFrame import MapControlFrame, MapParentFrame, MapPlotFrame, TextFrame
+from Frames.WxFrames import MapParentPanel, MapControlPanel, MapPlotPanel
 from MapModel import MapModel
 from Polymap import CellPatch, PolygonPath
 from Response import Response
@@ -38,7 +41,7 @@ class Controller:
         self.MapModel.create_cells()
         vorCells = self.MapModel.get_vorCells()
         self.create_cellPatches(vorCells)
-        self.config_widgets(frames)
+        # self.config_widgets(frames)
 
     # creat cellPatches from voronoi polygons
 
@@ -72,147 +75,184 @@ class Controller:
         frame.update_entrys(curResp)
 
     # config map widgets sliders/dropdowns
-    def config_mapWidgets(self, frame):
-        resp_targs = self.MapModel.get_responseNames()
-        timeRange, stepsPerDay = self.MapModel.get_timeParams()
-        timeSliderRes = 1/stepsPerDay
-        frame.config_timeSlider(resolution=timeSliderRes, from_=timeRange[0],
-                                to=timeRange[1], digits=4)
-        frame.config_timeSpin(increment=timeSliderRes,
-                              from_=timeRange[0], to=timeRange[1], format="%5.2f", width=7)
-        # configure dropdowns
-        targNamelen = 0
-        respNameLen = 0
+    def config_controlWidgets(self, panel: MapControlPanel):
 
+            # Config ind var dropdowns
+            indVars: List[indepVar] = self.MapModel.get_indepVars()
+            for var in indVars:
+                # drop = ttk.Combobox(frame)
+                maxWidth = 0
+                for label in var.labels:
+                    if len(label) > maxWidth:
+                        maxWidth = len(label)
+                drop = wx.ComboBox(panel, style=wx.CB_READONLY)
+                drop.AppendItems(var.labels)
+                drop.SetSelection(0)
+                drop.Bind(
+                    wx.EVT_TEXT, lambda event: self.view.map_simIdDropdownChanged(panel, event))
+                label = wx.StaticText(panel, label=str(var.name))
+                panel.simIdLabels = label
+                panel.simDrops = drop
+            panel.place_widgets()
+            panel.bind_widgets()
+            resp_targs = self.MapModel.get_responseNames()
+            timeRange, stepsPerDay = self.MapModel.get_timeParams()
+            timeSliderRes = 1/stepsPerDay
+            panel.timeSlider.SetMin(timeRange[0])
+            panel.timeSlider.SetMax(timeRange[1]*stepsPerDay)
+            panel.timeSlider.SetTickFreq(1)
+            panel.timeSpin.SetRange(timeRange[0], timeRange[1])
+            panel.timeSpin.SetFormat("%f")
+            panel.timeSpin.SetDigits(2)
+            panel.timeSpin.SetIncrement(.25)
+
+            targNamelen = 0
+            respNameLen = 0
+
+            respNames = []
+            targNames = []
+            for string in resp_targs:
+                underInd = string.rfind('_')
+                respName = string[:underInd]
+                targName = string[underInd+1:]
+                if len(targName) > targNamelen:
+                    targNamelen = len(targName)
+
+                if len(respName) > respNameLen:
+                    respNameLen = len(respName)
+
+                if targName not in targNames:
+                    targNames.append(targName)
+                if respName not in respNames:
+                    respNames.append(respName)
+                    panel.respDrop.Clear()
+            panel.respDrop.AppendItems(respNames)
+            panel.respDrop.SetSelection(0)
+            self.view.filter_drop(panel, None)
+
+    def config_settingsNoteBook(self, book, controlPanel):
+        colorPanel = book.colorPanel
+        numRespNames = controlPanel.respDrop.GetCount()
         respNames = []
-        targNames = []
-        for string in resp_targs:
-            underInd = string.rfind('_')
-            respName = string[:underInd]
-            targName = string[underInd+1:]
-            if len(targName) > targNamelen:
-                targNamelen = len(targName)
+        for x in range(numRespNames):
+            respNames.append(controlPanel.respDrop.GetString(x))
 
-            if len(respName) > respNameLen:
-                respNameLen = len(respName)
+        colorPanel.respDrop.AppendItems(respNames)
+        colorPanel.respDrop.SetSelection(0)
+        self.view.filter_drop(colorPanel, None)
+        resp_targ = colorPanel.resp_targ
+        currResp = self.responses[resp_targ]
+        colorPanel.colorScaleDrop.SetValue(currResp.cmapStr)
 
-            if targName not in targNames:
-                targNames.append(targName)
-            if respName not in respNames:
-                respNames.append(respName)
-        frame.respDropDown.config(values=respNames, width=respNameLen+3)
-        frame.targDropDown.config(width=targNamelen)
-        frame.set_respDropIndex(respNames[0])
-        self.view.filter_drop(frame, None)
-        availableTargs = frame.targDropDown.cget('values')
-        frame.targDropDown.set(list(availableTargs)[0])
+            # config matplotlib fig/plot cellpatches
 
-        # Config ind var dropdowns
-        indVars: List[indepVar] = self.MapModel.get_indepVars()
-        for var in indVars:
-            drop = ttk.Combobox(frame)
-            maxWidth = 0
-            for label in var.labels:
-                if len(label) > maxWidth:
-                    maxWidth = len(label)
-            drop.config(values=var.labels, width=maxWidth)
-            drop.set(var.labels[0])
-            drop.bind("<<ComboboxSelected>>",
-                      lambda event: self.view.map_simIdDropdownChanged(frame, event))
-            frame.simIdDrops.append(drop)
-            frame.simIdLabels.append(var.name)
-        frame.pack_children()
-        frame.grid(row=0, column=0)
-
-    # config matplotlib fig/plot cellpatches
-    def config_mapPlot(self, frame: MapParentFrame):
-        plotFrame: MapPlotFrame = frame.get_plotFrame()
+    def config_mapPlot(self, panel: MapParentPanel):
+        plotPanel: MapPlotPanel = panel.plotPanel
         cwd = os.getcwd()
         background = "natural-earth.png"
         backPath = os.path.join(cwd, background)
         if os.path.exists(backPath):
-            plotFrame.ax.imshow(imread(backPath), origin='upper', transform=ccrs.PlateCarree(),
+            plotPanel.ax.imshow(imread(backPath), origin='upper', transform=ccrs.PlateCarree(),
                                 extent=[-180, 180, -90, 90])
         cellCenters = self.MapModel.get_cellCenters()
         xrange, yrange = self.get_vorPlotLim(cellCenters)
-        self.plot_cellPatches(frame)
-        frame.set_plotLims(xrange, yrange)
+        plotPanel.ax.set_xlim(xrange)
+        plotPanel.ax.set_ylim(yrange)
         states_provinces = NaturalEarthFeature(
             category='cultural',
             name='admin_1_states_provinces_lines',
             scale='50m',
             facecolor='none')
 
-        plotFrame.ax.add_feature(LAND)
-        plotFrame.ax.add_feature(COASTLINE)
-        plotFrame.ax.add_feature(BORDERS)
-        plotFrame.ax.add_feature(
+        plotPanel.ax.add_feature(LAND)
+        plotPanel.ax.add_feature(COASTLINE)
+        plotPanel.ax.add_feature(BORDERS)
+        plotPanel.ax.add_feature(
             states_provinces, edgecolor='gray', facecolor='none')
 
     # update map based on control widget values
 
-    def update_map(self, frame):
+    def update_map(self, panel):
+        print("updating map with", type(panel))
+        if isinstance(panel, MapControlPanel):
+            plotPanel: MapControlPanel = panel.plotPanel
+            controlPanel: MapControlPanel = panel
 
-        if isinstance(frame, MapControlFrame):
-            plotFrame: MapPlotFrame = frame.get_master().get_plotFrame()
-            controlFrame: MapControlFrame = frame
+        elif isinstance(panel, MapParentPanel):
+            plotPanel: MapPlotFrame = panel.plotPanel
+            controlPanel: MapControlPanel = panel.controlPanel
 
-        elif isinstance(frame, MapParentFrame):
-            plotFrame: MapPlotFrame = frame.get_plotFrame()
-            controlFrame: MapControlFrame = frame.get_controlFrame()
-
-        plotFrame.reset_patchAlphas(.3)
+        plotPanel.patchAlphas = .3
 
         vorCells = self.MapModel.get_vorCells()
         numCells = len(vorCells)
         responses = self.responses
-        simIndex = self.find_currSimIndex(controlFrame)
+        simIndex = self.find_currSimIndex(controlPanel)
         timeRange, stepsPerDay = self.MapModel.get_timeParams()
-        timeStep = controlFrame.get_timeSliderVal()
-        densityOn = controlFrame.get_densityToggle()
+        timeStep = controlPanel.timeSpin.GetValue()
+        densityOn = 0
         timeIndex = round(timeStep*stepsPerDay)
 
-        resp_targ = controlFrame.get_currResp_targ()
-        resp_targs = self.MapModel.get_responseNames()
+        resp_targ = controlPanel.resp_targ
+        currResp = self.responses[resp_targ]
 
-        responseIndex = resp_targs.index(resp_targ)
+        responseIndex = currResp.index
 
         if densityOn:
             densityMax = self.MapModel.find_normalizedMax(responseIndex)
+        dataList = []
 
         for cell in range(numCells):
             data = self.MapModel.get_dataBySimTimeCellResp(
                 simIndex, timeIndex, cell+1, responseIndex)
+            dataList.append(data)
             if densityOn:
                 area = vorCells[cell].area
-                color = responses[responseIndex].gen_colorNorm(
+                color = currRespgen_colorNorm(
                     data, densityMax, area)
             else:
-                color = responses[responseIndex].gen_color(data)
+                color = currResp.gen_color(data)
+                color = currResp.gen_cmapColor(data)
             # update color on plot
-            plotFrame.update_cellPatchColor(color, cell+1)
+            plotPanel.cellPatches[cell].set_facecolor(color)
             if color != [1, 1, 1]:
-                plotFrame.update_cellPatchAlpha(1, cell+1)
+                plotPanel.cellPatches[cell].set_alpha(1)
             else:
                 pass
+        
+        
+        plotPanel.figure.subplots_adjust(bottom=0, top=1, left=0, right=1,wspace=0,hspace=0)
+        plotPanel.canvas.draw()
 
-        plotFrame.draw_canvas()
+        # resp = responses[responseIndex]
+        # ax = plotPanel.ax
+        # fig = plotPanel.figure
+        # cax = fig.add_axes([.27, .8, .5, .05])
+        # ax.colorbar(cm.ScalarMappable(norm=resp.normalizer,
+        #                              cmap=resp.cmapStr), cax=ax, orientation='horizontal', loc=11)
+        # ax.colorbar(
+
+        # print("axes", ax)
+        # ax.figure.colorbar(norm=resp.normalizer, cmap=resp.cmapStr, ax=ax)
 
     # create/update legend based on param values
-    def update_legend(self, numThresh, frame):
-        if isinstance(frame, MapParentFrame):
-            controlFrame: MapControlFrame = frame.get_controlFrame()
-            plotFrame: MapPlotFrame = frame.get_plotFrame()
 
-        elif isinstance(frame, MapControlFrame):
-            controlFrame: MapControlFrame = frame
-            plotFrame: MapPlotFrame = controlFrame.get_plotFrame()
+    def update_legend(self, panel):
+        if isinstance(panel, MapParentPanel):
+            controlPanel: MapControlPanel = panel.controlPanel
+            plotPanel: MapPlotPanel = panel.plotPanel
 
-        resp_targ = controlFrame.get_currResp_targ()
-        resp_targs = self.MapModel.get_responseNames()
-        responseIndex = resp_targs.index(resp_targ)
-        responses = self.responses
-        response: Response = responses[responseIndex]
+        elif isinstance(panel, MapControlPanel):
+            controlPanel: MapControlPanel = panel
+            plotPanel: MapPlotPanel = controlPanel.plotPanel
+        
+        numThresh=plotPanel.numThresh
+        print("numThrush is",numThresh)
+        resp_targ = controlPanel.resp_targ
+
+        response: Response = self.responses[resp_targ]
+        responseIndex = response.index
+
         max1 = response.max
         min1 = response.min
         lowThresh = response.smallValPerc
@@ -223,33 +263,37 @@ class Controller:
         patches.append(Patch(facecolor=[1, 1, 1], label=lowLabel))
         for x in range(numThresh):
             colorThresh = ((x+1)*(max1-min1)/(numThresh))+min1
-            color = response.gen_color(colorThresh)
+            # color = response.gen_color(colorThresh)
+            color = response.gen_cmapColor(colorThresh)
             dataThresh = str("{:.2f}".format(colorThresh))
             patches.append(Patch(facecolor=color, label=dataThresh))
 
-        location = plotFrame.legendLoc
+        location = plotPanel.legendLoc
         if location == 'none':
-            plotFrame.ax.legend().set_visible(False)
+            plotPanel.ax.legend().set_visible(False)
         else:
-            plotFrame.ax.legend(handles=patches, loc=location)
-        plotFrame.draw_canvas()
+            plotPanel.ax.legend(handles=patches, loc=location)
+        plotPanel.canvas.draw()
 
     # generate a color based on linear scaled
     # hue currently hard coded
 
-    def find_currSimIndex(self, frame: MapControlFrame):
-        simId = frame.get_simId()
+    def find_currSimIndex(self, panel: MapControlPanel):
+        simId = panel.simId
         simList: List[simInst] = self.MapModel.get_simList()
 
         for index, sim in enumerate(simList):
             simPrefix = ''.join([str(x) for x in sim.simPrefix])
             if simPrefix == simId:
                 return index
+            else:
+                print("Sim Index not found")
+                return 0
 
     # detect if the mouse has changed cell
 
-    def mapDetect_cellChange(self, frame: MapPlotFrame, event):
-        if event.inaxes == frame.get_axes():
+    def mapDetect_cellChange(self, panel: MapPlotPanel, event):
+        if event.inaxes == panel.ax:
             # Check if mouse in is currCell
             mouse_in_cell = self.MapModel.is_point_in_cell(
                 event.xdata, event.ydata, self.currCell)
@@ -259,64 +303,65 @@ class Controller:
                     event.xdata, event.ydata)
 
                 if found:
-                    frame.get_dataFrame().write_hoverLabel(self.currCell)
+                    # frame.get_dataFrame().write_hoverLabel(self.currCell)
+                    print("hover over cell", self.currCell)
                 else:
                     pass
             else:
                 pass
 
     # if cell is selected highlight cell and write databox
-    def cell_selected(self, frame:MapPlotFrame, event):
-
+    def cell_selected(self, panel: MapPlotPanel, event):
+        print("cell selected")
         artist = event.artist
         if self.selected_cell is not None:
             self.selected_cell.set_linewidth(1.0)
         artist.set_linewidth(3.0)
 
         self.selected_cell = artist
-        frame.set_currCell(artist)
+        panel.currCell = artist
 
-        if frame.get_dataFrame() is not None:
-            self.write_cellData(frame)
-        frame.draw_canvas()
+        if panel.dataPanel is not None:
+            self.write_cellData(panel)
+            print("writing cell data")
+        panel.canvas.draw()
     # write data box if cell is selected
 
-    def write_cellData(self, frame):
-        if isinstance(frame, MapPlotFrame):
-            controlFrame = frame.get_controlFrame()
-            cell=frame.get_currCell()
-        dataFrame:TextFrame = frame.get_dataFrame()
-        if dataFrame is not None:
+    def write_cellData(self, panel):
+        if isinstance(panel, MapPlotPanel):
+            controlPanel = panel.controlPanel
+            cell = panel.currCell
+            dataPanel: MapdataPanel = panel.dataPanel
+        elif isinstance(panel, MapParentPanel):
+            controlPanel = panel.controlPanel
+            dataPanel = panel.plotPanel.dataPanel
+        if dataPanel is not None:
             responses = self.MapModel.get_responseNames()
-            resp_targ=controlFrame.get_currResp_targ()
-            dataFrame.plotFrame=frame
-            textwidget = dataFrame.textBox
-            bFont = font.Font(textwidget, textwidget.cget("font"))
-            bFont.config(weight="bold")
-            # nFont = font.Font(textwidget, textwidget.cget("font"))
-            textwidget.tag_configure("bold", font=bFont)
-            simIndex = self.find_currSimIndex(controlFrame)
+            resp_targ = str(controlPanel.respDrop.GetStringSelection()) + \
+                "_"+(controlPanel.tgtDrop.GetStringSelection())
+            dataView = dataPanel.dataView
+            simIndex = self.find_currSimIndex(controlPanel)
             stepsPerDay = self.MapModel.get_timeParams()[1]
-            timeStep = controlFrame.get_timeSliderVal()
+            timeStep = controlPanel.timeSpin.GetValue()
 
             timeIndex = round(timeStep*stepsPerDay)
-            #response = controlFrame.get_respDropDownIndex()
+            # response = controlFrame.get_respDropDownIndex()
             vorCells = self.MapModel.get_vorCells()
-            densityOn = controlFrame.get_densityToggle()
-            scaleFac = controlFrame.get_densityScaleFac()
+            densityOn = 0
+            scaleFac = 1
             cellNum = cell.get_cellNum()
-            dataFrame.clear()
+            dataView.Clear()
+            filterStr = ""
+            underPos = resp_targ.find('_')
+            print("filter mode", dataPanel.filterMode)
+            if dataPanel.filterMode == 'Single':
+                filterStr = resp_targ
 
-            filterStr=""
-            underPos=resp_targ.find('_')
-            if dataFrame.modeDrop.get() == 'Single':
-                filterStr=resp_targ
-            
-            elif dataFrame.modeDrop.get() =='Response':
-                filterStr=resp_targ[:underPos]
+            elif dataPanel.filterMode == 'Response':
+                filterStr = resp_targ[:underPos]
 
-            elif dataFrame.modeDrop.get()=='Target':
-                filterStr=resp_targ[underPos:]
+            elif dataPanel.filterMode == 'Target':
+                filterStr = resp_targ[underPos:]
 
             for index, response in enumerate(responses):
                 data = self.MapModel.get_dataBySimTimeCellResp(
@@ -327,30 +372,31 @@ class Controller:
 
                 dataLine = response+": "+"{0:.2f}".format(data)+"\n"
                 if response == resp_targ:
-                    textwidget.insert('1.0',dataLine)
+                    dataView.write(dataLine)
                 elif filterStr in response:
-                # if index==currResponse:
-                #     print("should be bold")
-                #     textwidget.config(font=bFont)
-                # else:
-                #     textwidget.config(font=nFont)
-                    textwidget.insert(tk.END, dataLine)
-            dataFrame.view_currLine()
-            dataFrame.write_selectedLabel(cell)
+                    # if index==currResponse:
+                    #     print("should be bold")
+                    #     textwidget.config(font=bFont)
+                    # else:
+                    #     textwidget.config(font=nFont)
+                    dataView.write(dataLine)
+            # dataFrame.view_currLine()
+            # dataFrame.write_selectedLabel(cell)
 
     def initialize_respObjs(self):
         default_hue = 185
         responsesNames = self.get_reponseNames()
         simList = self.MapModel.get_simList()
-        self.responses = []
-
-        for index in range(len(responsesNames)):
+        self.responses = {}
+        for index, resp_targ in enumerate(responsesNames):
             resp = Response()
             resp.find_respMax(simList, index)
             resp.find_respMin(simList, index)
+            resp.gen_cmap('viridis')
             resp.hue = default_hue
             resp.type = "linear"
-            self.responses.append(resp)
+            resp.index = index
+            self.responses[resp_targ] = resp
 
     def snapShot(self):
 
@@ -396,7 +442,7 @@ class Controller:
             currResp.hue = hue
 
             for time in times:
-                self.update_legend(settings.numLegendEntries, controlFrame)
+                self.update_legend(controlFrame)
                 controlFrame.timeSlider.set(time)
                 self.update_map(controlFrame)
                 imgName = os.path.join(snapPath, str(

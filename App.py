@@ -3,19 +3,18 @@
 # Main Appliction class
 import tkinter as tk
 from tkinter import ttk
-
+import wx
 from MapFrame import MapParentFrame
-from View import View
+from WxView import View
 from WindowManger import WindowManager
 
 
 def main():
-    root = tk.Tk()
-    root.title("Impact Map Viewer 0.0.15")
+    app = wx.App()
     view = View()
-    view.init_mainWindow(root)
+    view.init_mainWindow()
 
-    root.mainloop()
+    app.MainLoop()
 
 
 if __name__ == "__main__":

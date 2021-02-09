@@ -2,7 +2,6 @@ from typing import List
 
 import cartopy.crs as ccrs
 import matplotlib as mpl
-import settings
 import wx
 import wx.lib.agw.aui as aui
 import wx.lib.agw.floatspin as fs
@@ -10,6 +9,7 @@ import wx.lib.mixins.inspection as wit
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import \
     NavigationToolbar2WxAgg as NavigationToolbar
+from settingsPanel import SettingsNotebook
 
 
 class MapParentPanel(wx.Panel):
@@ -18,10 +18,10 @@ class MapParentPanel(wx.Panel):
         self.parent = parent
         self.view = view
         self._controlPanel = MapControlPanel(parent, view)
-        self._plotPanel = MapPlotPanel(parent,view)
+        self._plotPanel = MapPlotPanel(parent, view)
 
-        self._controlPanel.plotPanel=self._plotPanel
-        self.plotPanel.controlPanel=self._controlPanel
+        self._controlPanel.plotPanel = self._plotPanel
+        self.plotPanel.controlPanel = self._controlPanel
         self.placePanels()
 
     def placePanels(self):
@@ -49,47 +49,78 @@ class MapControlPanel(wx.Panel):
 
     def __init__(self, parent, view, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
-        self.view=view
+        self.view = view
         self._simDrops = []
         self._simIdLabels = []
         self._plotPanel = None
-        self.place_widgets()
-        self.bind_widgets()
+        self._settingsNotebook = None
 
     def place_widgets(self):
-        self.timeSpin = fs.FloatSpin(self)
-        
+        self.grid = wx.FlexGridSizer(5+len(self.simIdLabels),3,3)
+        for label in self.simIdLabels:
+            self.grid.Detach(label)
+            self.grid.Add(label,0,0,2)
+
+        self.timeSpin = fs.FloatSpin(self,size=(60,25))
         timeLabel = wx.StaticText(self, label="Time")
+        timeSpace=wx.StaticText(self,label="")
+        self.grid.Add(timeSpace,0,0,0)
         self.timeSlider = wx.Slider(
-            self, -1, style=wx.SL_HORIZONTAL | wx.SL_AUTOTICKS)
+            self, -1, style=wx.SL_HORIZONTAL)
         respLabel = wx.StaticText(self, label="Response")
         self.respDrop = wx.ComboBox(self, -1, style=wx.CB_READONLY)
+        tgtLabel=wx.StaticText(self,label="Target")
         self.tgtDrop = wx.ComboBox(self, -1, style=wx.CB_READONLY)
-        self.col0 = wx.BoxSizer(wx.HORIZONTAL)
-        self.col0.Add(timeLabel, 1, 1, 20)
-        self.col0.Add(respLabel, 1, 1, 20)
-        self.col1 = wx.BoxSizer(wx.HORIZONTAL)
-        self.col1.Add(self.timeSpin, 0, 1, 20)
-        self.col1.Add(self.timeSlider, 0, 1, 20)
-        self.col1.Add(self.respDrop, 1, 0, 20)
-        self.col1.Add(self.tgtDrop, 1, 0, 20)
-        rowSizer = wx.BoxSizer(wx.VERTICAL)
-        rowSizer.Add(self.col0, 0, 1, 20)
-        rowSizer.Add(self.col1, 1, 20)
-        self.SetSizer(rowSizer)
+        settLabel=wx.StaticText(self,label="Settings") 
+        self.settButton = wx.Button(self,size=(25,25),label="\u2699")
+        self.grid.Add(timeLabel, 0, 0, 0)
+        self.grid.Add(respLabel, 0, 0, 0)
+        self.grid.Add(tgtLabel,0,0,0)
+        self.grid.Add(settLabel,0,0,0)
+
+        for drop in self.simDrops:
+            # self.grid.Detach(drop)
+            self.grid.Add(drop,0,0,0)
+        self.grid.Add(self.timeSpin, 0, 0, 0)
+        self.grid.Add(self.timeSlider, 0, 0, 0)
+        self.grid.Add(self.respDrop, 0, 0, 0)
+        self.grid.Add(self.tgtDrop, 0, 0, 0)
+        self.grid.Add(self.settButton, 0, 0, 0)
+        self.SetSizer(self.grid)
 
     def bind_widgets(self):
         self.timeSlider.Bind(wx.EVT_SCROLL_THUMBTRACK,
                              self.timeSlider_update, self.timeSlider)
         # self.timeSlider.Bind(wx.EVT_SCROLL_THUMBRELEASE, lambda event: self.view.map_timeSliderReleased(
-            # self, event), self.timeSlider)
+        # self, event), self.timeSlider)
         self.timeSpin.Bind(
             fs.EVT_FLOATSPIN, self.timeSpin_update, self.timeSpin)
+        self.respDrop.Bind(
+            wx.EVT_TEXT, lambda event: self.response_update(self, event), self.respDrop)
+        self.tgtDrop.Bind(wx.EVT_TEXT, lambda event: self.view.map_responseChanged(
+            self, event), self.tgtDrop)
+
+        self.settButton.Bind(wx.EVT_BUTTON, lambda event: self.view.spawn_settingsPanel(
+            self), self.settButton)
+
+    @property
+    def resp_targ(self):
+        resp = str(self.respDrop.GetStringSelection()) + \
+            "_"+(self.tgtDrop.GetStringSelection())
+        return resp
 
     @ property
     def plotPanel(self):
         return self._plotPanel
-    
+
+    @property
+    def settingsNotebook(self):
+        return self._settingsNotebook
+
+    @settingsNotebook.setter
+    def settingsNotebook(self, panel):
+        self._settingsNotebook = panel
+
     @ property
     def simDrops(self):
         return self._simDrops
@@ -98,12 +129,13 @@ class MapControlPanel(wx.Panel):
     def simIdLabels(self):
         return self._simIdLabels
 
-    @property
+    @ property
     def simId(self):
-        id=""
+        id = ""
         for drop in self.simDrops:
-            id=id+str(drop.GetCurrentSelection()+1)
+            id = id+str(drop.GetCurrentSelection()+1)
         return id
+
     @ plotPanel.setter
     def plotPanel(self, panel):
         self._plotPanel = panel
@@ -111,36 +143,39 @@ class MapControlPanel(wx.Panel):
     @ simDrops.setter
     def simDrops(self, drop):
         self._simDrops.append(drop)
-        self.col1.Insert(0, drop, 0, 0, 20)
 
     @ simIdLabels.setter
     def simIdLabels(self, label):
         self._simIdLabels.append(label)
-        self.col0.Insert(0, label, 0, 0, 20)
 
     def timeSpin_update(self, event):
         timeInc = float(self.timeSpin.GetIncrement())
         sliderIndex = round(self.timeSpin.GetValue()/timeInc)
         self.timeSlider.SetValue(sliderIndex)
-        self.view.map_timeSliderReleased(self,None)
+        self.view.map_timeSliderReleased(self, None)
 
     def timeSlider_update(self, event):
         sliderIndex = self.timeSlider.GetValue()
         timeInc = float(self.timeSpin.GetIncrement())
         simTime = sliderIndex*timeInc
         self.timeSpin.SetValue(simTime)
-        self.view.map_timeSliderReleased(self,None)
+        self.view.map_timeSliderReleased(self, None)
+
+    def response_update(self, panel, event):
+        self.view.filter_drop(self, event)
+        self.view.map_responseChanged(panel, event)
 
 
 class MapPlotPanel(wx.Panel):
 
-    def __init__(self, parent,view, *args, **kwargs):
+    def __init__(self, parent, view, *args, **kwargs):
         super().__init__(parent=parent)
-        self.view=view
+        self.view = view
         self._dataPanel = None
         self._controlPanel = None
         self._alpha = 0
-        self.legendLoc = settings.defLegendLoc
+        self.legendLoc = "lower left"
+        self.numThresh=4
         self.initPlot()
         self.bind_widgets()
 
@@ -159,10 +194,9 @@ class MapPlotPanel(wx.Panel):
     def bind_widgets(self):
         self.figure.canvas.mpl_connect(
             "motion_notify_event", lambda event: self.view.map_mouseMoved(self, event))
-        
+
         self.figure.canvas.mpl_connect(
             'pick_event', lambda event: self.view.map_mouseClicked(self, event))
-
 
     def plot_cellPatches(self, cellPatches):
         self._cellPatches = cellPatches
@@ -200,41 +234,82 @@ class MapPlotPanel(wx.Panel):
     def controlPanel(self, frame):
         self._controlPanel = frame
 
-    @property
+    @ property
     def cellPatches(self):
         return self._cellPatches
 
-    @property
+    @ property
     def dataPanel(self):
         return self._dataPanel
-    
-    @dataPanel.setter
-    def dataPanel(self,panel):
-        self._dataPanel=panel
 
-    @property
+    @ dataPanel.setter
+    def dataPanel(self, panel):
+        self._dataPanel = panel
+
+    @ property
     def currCell(self):
         return self._currCell
 
-    @currCell.setter
-    def currCell(self,cell):
-        self._currCell=cell
+    @ currCell.setter
+    def currCell(self, cell):
+        self._currCell = cell
+
 
 class MapdataPanel(wx.Panel):
 
-    def __init__(self,parent,view):
+    def __init__(self, parent, view):
         super().__init__(parent=parent)
-        self.view=view
-        self.dataView=wx.TextCtrl(self,style=wx.TE_MULTILINE)
-        self.filterMode='Response'
+        self.view = view
+        self._plotPanel = None
         self.place_widgets()
+        self.config_widgets()
+        self.bind_widgets()
 
     def place_widgets(self):
-        col0=wx.BoxSizer(wx.HORIZONTAL)
-        vSizer=wx.BoxSizer(wx.VERTICAL)
-        col0.Add(self.dataView,1,1,20)
-        vSizer.Add(col0,1,1,20)
+        self.hoverLabel = wx.StaticText(self, label='Hover:')
+        self.selectLabel = wx.StaticText(self, label='Selected:')
+        self.dataView = wx.TextCtrl(self, style=wx.TE_MULTILINE)
+        self.filterDrop = wx.Choice(self)
+        self.dataView.SetMinSize((300, 600))
+        col0 = wx.BoxSizer(wx.HORIZONTAL)
+        col1 = wx.BoxSizer(wx.HORIZONTAL)
+        col2 = wx.BoxSizer(wx.HORIZONTAL)
+        col3 = wx.BoxSizer(wx.HORIZONTAL)
+        vSizer = wx.BoxSizer(wx.VERTICAL)
+        col0.Add(self.hoverLabel, 1, 1, 20)
+        col1.Add(self.selectLabel, 1, 1, 20)
+        col2.Add(self.filterDrop, 1, 1, 20)
+        col3.Add(self.dataView, 1, 1, 20)
+        vSizer.Add(col0, 0, 1, 20)
+        vSizer.Add(col1, 0, 1, 20)
+        vSizer.Add(col2, 0, 1, 20)
+        vSizer.Add(col3, 0, 1, 20)
+
         self.SetSizer(vSizer)
+        self.Layout()
+
+    def config_widgets(self):
+        filterChoice = ["Response", "Target", "Single"]
+        self.filterDrop.AppendItems(filterChoice)
+        self.filterDrop.SetSelection(0)
+
+    def bind_widgets(self):
+        self.filterDrop.Bind(wx.EVT_CHOICE, lambda event: self.view.write_cellData(
+            self.plotPanel, event), self.filterDrop)
+
+    @ property
+    def filterMode(self):
+        index = self.filterDrop.GetSelection()
+        return self.filterDrop.GetString(index)
+
+    @ property
+    def plotPanel(self):
+        return self._plotPanel
+
+    @ plotPanel.setter
+    def plotPanel(self, panel):
+        self._plotPanel = panel
+
 
 def main():
     app = wx.App()

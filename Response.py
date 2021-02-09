@@ -1,5 +1,7 @@
 # Map Viewer
 # Classes to handle response functionality
+from matplotlib import cm
+from matplotlib import colors
 import colorsys
 
 # a cell response metric
@@ -16,6 +18,7 @@ class Response:
         self.upperThresh = .9  # maximum light value to avoid moving to black
         self.lowerThresh = .2
         self.smallValPerc = .0001
+        self.index = 0
 
     def find_respMax(self, simList, response):
 
@@ -63,38 +66,18 @@ class Response:
             color = [1, 0, 0]
         return color
 
-    # def gen_colorLinear_smallVal(self, data):
-    #         # Hue value from HSL color standard(0-360 degrees)
-    #         hueFrac = self.hue/360  # normalize hue
-    #         sat = 1  # represents 100 percent
-    #         if self.max > 0 and data is not None:
-    #             # lightness = (1-(data/self.max)*threshold)
+    def gen_cmap(self, cmapStr):
+        self._cmapStr = cmapStr
+        self.cmap = cm.get_cmap(self._cmapStr, 100)
+        self.normalizer = colors.Normalize(vmin=self.min, vmax=self.max)
 
-    #             if data >= self.max*self.smallValPerc and data <self.max:
-    #                 delta=self.upperThresh-self.lowerThresh
-    #                 lightness=(1-(data/self.max))*delta+self.lowerThresh
-    #                 color = colorsys.hls_to_rgb(hueFrac, lightness, sat)
-
-    #                 # print("data of",data,"produced lightness of",lightness)
-    #             elif data <self.max*self.smallValPerc and data>self.min:
-    #                 color=[1,1,0]
-    #             elif data <=self.min:
-    #                 color=[1,1,1]
-    #             elif data >=self.max:
-    #                 color=colorsys.hls_to_rgb(hueFrac,self.lowerThresh,sat)
-    #         else:
-    #             color = [1, 0, 0]
-    #         return color
-
-    def gen_colorNorm(self, data, max, area):
-        hueFrac = self.hue/360  # normalize hue
-        sat = 1  # represents 100 percent
-        threshold = .70  # maximum light value to avoid moving to black
+    def gen_cmapColor(self, data):
         if self.max > 0 and data is not None:
-            # lightness = (1-(data/self.max)*threshold)
-            data = data/area
-            lightness = 1-(data/max)*threshold
-            color = colorsys.hls_to_rgb(hueFrac, lightness, sat)
+            if data > self.max*self.smallValPerc:
+                normData = self.normalizer(data)
+                color = self.cmap(normData)
+            else:
+                color = [1, 1, 1]
         else:
             color = [1, 0, 0]
         return color
@@ -103,3 +86,12 @@ class Response:
         if self.type == "linear":
             return self.gen_colorLinear(data)
 
+    @property
+    def cmapStr(self):
+        return self._cmapStr
+
+    @cmapStr.setter
+    def cmapStr(self, cmap):
+        self._cmapStr = cmap
+        self.gen_cmap(cmap)
+        print("cmap changed")

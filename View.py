@@ -8,8 +8,13 @@ from tkinter import ttk
 import settings
 from ColorFrame import ColorParentFrame
 from Controller import Controller
-from MapFrame import (MapControlFrame, MapParentFrame, MapPlotFrame,
-                      MapSettingsFrame, TextFrame)
+from MapFrame import (
+    MapControlFrame,
+    MapParentFrame,
+    MapPlotFrame,
+    MapSettingsFrame,
+    TextFrame,
+)
 from Response import Response
 from WindowManger import WindowManager
 
@@ -17,7 +22,6 @@ from WindowManger import WindowManager
 
 
 class View:
-
     def __init__(self):
         self.mapController = Controller(self)
 
@@ -33,36 +37,41 @@ class View:
     def create_menuBar(self, frame):
         menuBar = tk.Menu(frame)
         fileMenu = tk.Menu(menuBar, tearoff=0)
-        fileMenu.add_command(label='Load Mav', command=self.spinup_mapDataSet)
+        fileMenu.add_command(label="Load Mav", command=self.spinup_mapDataSet)
         gridSpawnMenu = tk.Menu(fileMenu, tearoff=0)
-        fileMenu.add_cascade(label='Grid Spawn', menu=gridSpawnMenu)
+        fileMenu.add_cascade(label="Grid Spawn", menu=gridSpawnMenu)
+        gridSpawnMenu.add_command(label="Map", command=lambda: self.spawn_map("grid"))
         gridSpawnMenu.add_command(
-            label='Map', command=lambda: self.spawn_map('grid'))
+            label="Color", command=lambda: self.spawn_colorTool("grid")
+        )
         gridSpawnMenu.add_command(
-            label='Color', command=lambda: self.spawn_colorTool('grid'))
-        gridSpawnMenu.add_command(
-            label='Data Box', command=lambda: self.spawn_dataBox('grid'))
+            label="Data Box", command=lambda: self.spawn_dataBox("grid")
+        )
 
         floatSpawnMenu = tk.Menu(fileMenu)
-        fileMenu.add_cascade(label='Float Spawn', menu=floatSpawnMenu)
+        fileMenu.add_cascade(label="Float Spawn", menu=floatSpawnMenu)
         floatSpawnMenu.add_command(
-            label='Map', command=lambda: self.spawn_map('floating'))
+            label="Map", command=lambda: self.spawn_map("floating")
+        )
         floatSpawnMenu.add_command(
-            label='Color', command=lambda: self.spawn_colorTool('floating'))
+            label="Color", command=lambda: self.spawn_colorTool("floating")
+        )
         floatSpawnMenu.add_command(
-            label='Data Box', command=lambda: self.spawn_dataBox('floating'))
+            label="Data Box", command=lambda: self.spawn_dataBox("floating")
+        )
 
         floatSpawnMenu.add_command(
-            label='Control Frame', command=lambda: self.spawn_controlFrame('floating'))
+            label="Control Frame", command=lambda: self.spawn_controlFrame("floating")
+        )
 
-        menuBar.add_cascade(label='File', menu=fileMenu)
+        menuBar.add_cascade(label="File", menu=fileMenu)
         editMenu = tk.Menu(menuBar, tearoff=0)
-        menuBar.add_cascade(label='Edit', menu=editMenu)
+        menuBar.add_cascade(label="Edit", menu=editMenu)
         viewMenu = tk.Menu(menuBar, tearoff=0)
-        menuBar.add_cascade(label='View', menu=viewMenu)
+        menuBar.add_cascade(label="View", menu=viewMenu)
         saveMenu = tk.Menu(menuBar, tearoff=0)
-        menuBar.add_cascade(label='Save', menu=saveMenu)
-        saveMenu.add_command(label='Snapshot', command=self.save_snapShot)
+        menuBar.add_cascade(label="Save", menu=saveMenu)
+        saveMenu.add_command(label="Snapshot", command=self.save_snapShot)
 
         frame.config(menu=menuBar)
 
@@ -76,7 +85,7 @@ class View:
         self.mapController.config_mapPlot(frame)
         self.mapController.config_mapWidgets(frame.controlFrame)
         self.mapController.update_map(frame)
-        self.mapController.update_legend(settings.numLegendEntries, frame)
+        self.mapController.update_legend(frame)
         controlFrame: MapControlFrame = frame.get_controlFrame()
         # update map for first time
         self.map_responseChanged(controlFrame, None)
@@ -112,9 +121,9 @@ class View:
         self.mapController.config_mapWidgets(cFrame)
 
     def spawn_plotSettings(self, parent):
-        sFrame: MapSettingsFrame = MapSettingsFrame('Plot Settings', self)
+        sFrame: MapSettingsFrame = MapSettingsFrame("Plot Settings", self)
         sFrame.parent = parent
-        self.rootWm.add_frame(sFrame, mode='floating')
+        self.rootWm.add_frame(sFrame, mode="floating")
 
     # remove frame from view
     def remove_frame(self, frame):
@@ -125,23 +134,21 @@ class View:
     def spinup_mapDataSet(self):
         cwd = os.getcwd()
         dataFile = tk.filedialog.askopenfilename(initialdir=cwd)
-        self.parent.title(self.parent.title()+" -> "+dataFile)
+        self.parent.title(self.parent.title() + " -> " + dataFile)
         self.mapController.map_spinupDataSet(self.frames, dataFile)
 
     # event capture for time slider
 
     def map_timeSliderReleased(self, frame, event):
         self.mapController.update_map(frame)
-        plotFrame=frame.get_plotFrame()
+        plotFrame = frame.get_plotFrame()
         self.mapController.write_cellData(plotFrame)
-        
 
     # event capture for sim Id drop down
     def map_simIdDropdownChanged(self, frame, event):
         self.mapController.update_map(frame)
-        plotFrame=frame.get_plotFrame()
+        plotFrame = frame.get_plotFrame()
         self.mapController.write_cellData(plotFrame)
-
 
     # event capture for response drop down
     def map_responseChanged(self, frame, event):
@@ -155,7 +162,7 @@ class View:
             plotFrame = frame.get_plotFrame()
             controlFrame: MapControlFrame = frame
 
-            self.mapController.update_legend(settings.numLegendEntries, frame)
+            self.mapController.update_legend(frame)
             dataFrame = plotFrame.get_dataFrame()
             if dataFrame is not None:
                 self.mapController.write_cellData(plotFrame)
@@ -173,9 +180,7 @@ class View:
         if isinstance(frame, MapPlotFrame):
             self.mapController.cell_selected(frame, event)
 
-
-# save button was changed on color props
-
+    # save button was changed on color props
 
     def responsePropsChanged(self, args, frame):
         responses = self.mapController.responses
@@ -206,8 +211,7 @@ class View:
             if isinstance(loopFrame, MapParentFrame):
                 controlFrame = loopFrame.get_controlFrame()
                 self.mapController.update_map(controlFrame)
-                self.mapController.update_legend(
-                    settings.numLegendEntries, controlFrame)
+                self.mapController.update_legend(controlFrame)
 
     def colorResponseChanged(self, frame, event):
         responses = self.mapController.responses
@@ -244,8 +248,7 @@ class View:
         for frame in self.frames:
             if isinstance(frame, MapParentFrame):
                 self.mapController.update_map(frame)
-                self.mapController.update_legend(
-                    settings.numLegendEntries, frame)
+                self.mapController.update_legend(frame)
 
     def plotSettings_changed(self, args, frame):
 
@@ -255,8 +258,7 @@ class View:
 
         if "legendLoc" in args:
             plotFrame.legendLoc = args["legendLoc"]
-            self.mapController.update_legend(
-                settings.numLegendEntries, controlFrame)
+            self.mapController.update_legend(controlFrame)
 
     def filter_drop(self, frame, event):
         if isinstance(frame, MapControlFrame):
@@ -266,8 +268,8 @@ class View:
 
             for string in resp_targs:
                 if respName in string:
-                    underInd = string.rfind('_')
-                    targ = string[underInd+1:]
+                    underInd = string.rfind("_")
+                    targ = string[underInd + 1 :]
                     if targ not in targs:
                         targs.append(targ)
             oldTarg = frame.targDropDown.get()
@@ -279,5 +281,5 @@ class View:
 
             # self.map_responseChanged(frame,None)
 
-    def dataBoxMode_changed(self,event,frame:MapPlotFrame):
+    def dataBoxMode_changed(self, event, frame: MapPlotFrame):
         self.mapController.write_cellData(frame)
