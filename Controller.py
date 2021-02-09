@@ -303,8 +303,7 @@ class Controller:
                     event.xdata, event.ydata)
 
                 if found:
-                    # frame.get_dataFrame().write_hoverLabel(self.currCell)
-                    print("hover over cell", self.currCell)
+                    panel.hoverCell=self.currCell
                 else:
                     pass
             else:
@@ -319,11 +318,10 @@ class Controller:
         artist.set_linewidth(3.0)
 
         self.selected_cell = artist
-        panel.currCell = artist
+        panel.currCell=artist
 
         if panel.dataPanel is not None:
             self.write_cellData(panel)
-            print("writing cell data")
         panel.canvas.draw()
     # write data box if cell is selected
 

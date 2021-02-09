@@ -10,7 +10,7 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import \
     NavigationToolbar2WxAgg as NavigationToolbar
 from settingsPanel import SettingsNotebook
-
+from Polymap import CellPatch
 
 class MapParentPanel(wx.Panel):
     def __init__(self, parent, view):
@@ -174,6 +174,8 @@ class MapPlotPanel(wx.Panel):
         self._dataPanel = None
         self._controlPanel = None
         self._alpha = 0
+        self._currCell=0
+        self._hoverCell=0
         self.legendLoc = "lower left"
         self.numThresh=4
         self.initPlot()
@@ -251,9 +253,18 @@ class MapPlotPanel(wx.Panel):
         return self._currCell
 
     @ currCell.setter
-    def currCell(self, cell):
+    def currCell(self, cell:CellPatch):
         self._currCell = cell
+        self.dataPanel.selectCell=cell.get_cellNum()
 
+    @property
+    def hoverCell(self):
+        return self._hoverCell
+    
+    @hoverCell.setter
+    def hoverCell(self,cellNum):
+        self._hoverCell=cellNum
+        self.dataPanel.hoverCell=cellNum
 
 class MapdataPanel(wx.Panel):
 
@@ -310,11 +321,32 @@ class MapdataPanel(wx.Panel):
     def plotPanel(self, panel):
         self._plotPanel = panel
 
+    @property 
+    def hoverCell(self):
+        return self._hoverCell
+
+    @hoverCell.setter
+    def hoverCell(self,cellNum):
+        self._hoverCell=cellNum
+        self.hoverLabel.SetLabel("Hover: "+str(cellNum))
+
+    @property 
+    def selectCell(self):
+        return self._currCell
+
+    @selectCell.setter
+    def selectCell(self,cellNum):
+        self.selectLabel.SetLabel("Selected: "+str(cellNum))
+
+
+class TpamGrid(wx.Grid):
+    def __init__(self,parent,view):
+        super().__init__(parent=parent)
 
 def main():
     app = wx.App()
     frame = WxFrame(None, title='Centering')
-    mPanel = MapControlPanel(frame, None)
+    mPanel = TpamGrid(frame, None)
     frame.Show()
     app.MainLoop()
 

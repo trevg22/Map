@@ -42,7 +42,7 @@ class View(wx.Frame):
     def spawn_controlPanel(self, parent):
         panel = MapControlPanel(parent, self)
 
-    def spawn_dataPanel(self):
+    def spawn_dataPanel(self,event):
         frame = wx.Frame(None)
         dataPanel = MapdataPanel(frame, self)
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -106,16 +106,12 @@ class View(wx.Frame):
             if fileDialog.ShowModal() == wx.ID_CANCEL:
                 return     # the user changed their mind
 
-            pathname = fileDialog.GetPath()
+            dataFile = fileDialog.GetPath()
             try:
-                with open(pathname, 'r') as file:
+                with open(dataFile, 'r') as file:
                     pass
             except IOError:
-                wx.LogError("Cannot open file '%s'." % newfile)
-
-            dataFile = os.path.join(cwd, 'mavTest')
-
-        # self.parent.title(self.parent.title()+" -> "+dataFile)
+                wx.LogError("Cannot open file '%s'." % dataFile)
 
             self.mapController.map_spinupDataSet(self.panels, dataFile)
 
