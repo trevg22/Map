@@ -109,11 +109,6 @@ class View:
                 mFrame.set_dataFrame(tFrame)
                 tFrame.set_parent(mFrame)
 
-    def spawn_colorTool(self, WM_mode):
-        cFrame = ColorParentFrame("Color", self)
-        self.rootWm.add_frame(cFrame, mode=WM_mode)
-        self.frames.append(cFrame)
-        self.mapController.config_colorWidgets(cFrame)
 
     def spawn_controlFrame(self, WM_mode):
         cFrame = MapControlFrame(self)
@@ -172,8 +167,9 @@ class View:
     # mouse moved event
 
     def map_mouseMoved(self, frame, event):
-        if frame.get_dataFrame() is not None:
-            self.mapController.mapDetect_cellChange(frame, event)
+        #if frame.get_dataFrame() is not None:
+            #self.mapController.mapDetect_cellChange(frame, event)
+        pass
 
     # mouse click event
     def map_mouseClicked(self, frame, event):

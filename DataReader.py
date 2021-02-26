@@ -57,11 +57,17 @@ class simInst():
 
 class Reader:
 
-    def readMav_file(self, file):
+    def __init__(self):
+        self.isTpam=False
 
+    def readMav_file(self, file):
+        self.file=file
         start = timeit.timeit()
         with open(file, 'r') as f:
             data = json.load(f)
+            if "tpam" in data:
+                self.isTpam=True
+
 
         # self.readColorJson("colors.json")
         self.simList = []
@@ -183,3 +189,25 @@ class Reader:
             quit()
 
         return self.indVars
+
+    
+    def query_tpamforSlice(self,fileName,simId,timeIndex,side,target):
+        print("tpam queried")
+        if self.isTpam: 
+            with open(self.file,'r') as f:
+                data=json.load(f)
+                data=data["tpam"]
+                targets=list(data["targets"])
+                targIndex=0
+                for index,targ in enumerate(targets):
+                    if targ[0]==target:
+                        targIndex=index
+
+                id=str(simId)+"_"+str(timeIndex)+"_"+str(side)+"_"+str(targIndex)
+                if data[id] is not None and data is not False:
+                    return data[id]
+                else:
+                    print("tpam is none")
+                    return None
+        else:
+            return None

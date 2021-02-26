@@ -155,6 +155,9 @@ class MapModel:
     def get_dataBySimTimeCellResp(self, simIndex, timeIndex, cell, response):
         return self.simList[simIndex].simGrid[timeIndex][cell-1].dataLine[response]
 
+    def getTpamByTimeSideTarget(self,fileName,simId,time,side,target):
+        return self.reader.query_tpamforSlice(fileName,simId,time,side,target)
+        
     def get_pathCells(self):
         return self.pathCells
 

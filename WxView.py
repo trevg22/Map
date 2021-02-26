@@ -5,7 +5,7 @@ import os
 import tkinter as tk
 from tkinter import ttk
 import wx
-from Frames.WxFrames import MapControlPanel, MapParentPanel, MapPlotPanel, MapdataPanel
+from WxFrames import MapControlPanel, MapParentPanel, MapPlotPanel, MapdataPanel,TpamGrid
 from settingsPanel import colorPanel,SettingsNotebook
 import settings
 from Controller import Controller
@@ -13,6 +13,7 @@ from Response import Response
 from WindowManger import WindowManager
 from settingsPanel import colorPanel
 from AppMenu import AppMenu
+import _thread
 
 # Main gui class that has controller member
 
@@ -23,7 +24,7 @@ class View(wx.Frame):
         # super().__init__(wx.ID_ANY,"Map Viewer",size=(500,500))
         super().__init__(None,size=(500,500))
         self.mapController = Controller(self)
-
+        self.tpamFile="tpam2.json"
         self.frames = []
         self.panels = []
 
@@ -33,14 +34,18 @@ class View(wx.Frame):
         menuBar=AppMenu(frame,self)
         self.spinup_mapDataSet(None)
         self.spawn_mapPanel(frame)
-        # self.spawn_dataPanel()
-        # self.spawn_plotPanel(frame)
-        print("spawned")
+        self.spawn_dataPanel(None)
+        # self.spawn_tpamGrid()
         frame.Show()
     # create menu bar at top
 
     def spawn_controlPanel(self, parent):
         panel = MapControlPanel(parent, self)
+
+    def spawn_tpamGrid(self):
+        frame=wx.Frame(None)
+        panel=TpamGrid(frame,None)
+        frame.Show()
 
     def spawn_dataPanel(self,event):
         frame = wx.Frame(None)
@@ -51,6 +56,10 @@ class View(wx.Frame):
         vSizer.Add(hSizer, 1, 1, 20)
         frame.SetSizer(vSizer)
         frame.Show()
+        frame2=wx.Frame(None)
+        tpamPanel=TpamGrid(frame2,None)
+        dataPanel.tpamGrid=tpamPanel
+        frame2.Show()
 
         for panel in self.panels:
             if isinstance(panel, MapParentPanel):
@@ -99,7 +108,6 @@ class View(wx.Frame):
     def spinup_mapDataSet(self,event):
         cwd = os.getcwd()
 
-
         with wx.FileDialog(self, "Open json file",defaultDir=cwd, 
                        style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
 
@@ -117,14 +125,21 @@ class View(wx.Frame):
 
     # event capture for time slider
 
-    def map_timeSliderReleased(self, frame, event):
-        self.mapController.update_map(frame)
+    def map_timeSliderChanged(self, panel, event):
+        self.mapController.update_map(panel)
+        # self.mapController.query_tpamforSlice(panel,self.tpamFile)
+
+    def map_timeSliderReleased(self,panel,event):
+        self.mapController.update_map(panel)
+        # self.mapController.query_tpamforSlice(panel,self.tpamFile)
+        _thread.start_new_thread(self.mapController.query_tpamforSlice,(panel,self.tpamFile))
 
     # event capture for sim Id drop down
 
     def map_simIdDropdownChanged(self, panel, event):
         self.mapController.update_map(panel)
         plotPanel = panel.plotPanel
+        self.mapController.query_tpamforSlice(panel,self.tpamFile)
 
     # event capture for response drop down
 
@@ -141,11 +156,12 @@ class View(wx.Frame):
 
             self.mapController.update_legend(
                 controlPanel)
+            # self.mapController.query_tpamforSlice(controlPanel,self.tpamFile)
+            _thread.start_new_thread(self.mapController.query_tpamforSlice,(panel,self.tpamFile))
             responses = self.mapController.responses
             resp_targ = controlPanel.resp_targ
             currResp = responses[resp_targ]
 
-            print("response changed")
             if dataPanel is not None:
                 self.mapController.write_cellData(plotPanel)
 
@@ -161,8 +177,6 @@ class View(wx.Frame):
     # mouse moved event
 
     def settings_handler(self, params, func):
-        print("settings handled")
-        print(params)
         if "response" in params:
             resp = self.mapController.responses[params["response"]]
             func(resp)
@@ -170,7 +184,6 @@ class View(wx.Frame):
         elif "plotPanel" in params:
             plotPanel=params["plotPanel"].plotPanel
             func(plotPanel)
-            print("handled")
 
     def map_mouseMoved(self, panel, event):
         if panel.dataPanel is not None:

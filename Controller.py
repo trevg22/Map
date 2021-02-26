@@ -20,7 +20,7 @@ import settings
 from ColorFrame import ColorParentFrame
 from DataReader import Reader, indepVar, simInst
 from MapFrame import MapControlFrame, MapParentFrame, MapPlotFrame, TextFrame
-from Frames.WxFrames import MapParentPanel, MapControlPanel, MapPlotPanel
+from WxFrames import MapParentPanel, MapControlPanel, MapPlotPanel
 from MapModel import MapModel
 from Polymap import CellPatch, PolygonPath
 from Response import Response
@@ -33,6 +33,11 @@ class Controller:
         self.currCell = None
         self.selected_cell = None
         self.view = view
+        self.tpamSlice=None
+        self.prevTime=-1
+        self.prevSimId=-1
+        self.prevTarget=-1
+        self.prevSide=-1
 
     # read in data and config widgets based on data
     def map_spinupDataSet(self, frames, mavFile):
@@ -66,13 +71,6 @@ class Controller:
             elif isinstance(frame, MapControlFrame):
                 self.config_mapWidgets(frame)
 
-    def config_colorWidgets(self, frame):
-        responsesNames = self.MapModel.get_responseNames()
-        responses = self.responses
-        frame.config_respDrop(values=responsesNames)
-        frame.set_respDropIndex(responsesNames[0])
-        curResp: Response = responses[0]
-        frame.update_entrys(curResp)
 
     # config map widgets sliders/dropdowns
     def config_controlWidgets(self, panel: MapControlPanel):
@@ -96,6 +94,7 @@ class Controller:
             panel.place_widgets()
             panel.bind_widgets()
             resp_targs = self.MapModel.get_responseNames()
+            self.query_tpamforSlice(panel,"tpam2.json")
             timeRange, stepsPerDay = self.MapModel.get_timeParams()
             timeSliderRes = 1/stepsPerDay
             panel.timeSlider.SetMin(timeRange[0])
@@ -129,6 +128,7 @@ class Controller:
             panel.respDrop.AppendItems(respNames)
             panel.respDrop.SetSelection(0)
             self.view.filter_drop(panel, None)
+
 
     def config_settingsNoteBook(self, book, controlPanel):
         colorPanel = book.colorPanel
@@ -247,7 +247,6 @@ class Controller:
             plotPanel: MapPlotPanel = controlPanel.plotPanel
         
         numThresh=plotPanel.numThresh
-        print("numThrush is",numThresh)
         resp_targ = controlPanel.resp_targ
 
         response: Response = self.responses[resp_targ]
@@ -286,9 +285,8 @@ class Controller:
             simPrefix = ''.join([str(x) for x in sim.simPrefix])
             if simPrefix == simId:
                 return index
-            else:
-                print("Sim Index not found")
-                return 0
+        print("Sim Index not found")
+        return 0
 
     # detect if the mouse has changed cell
 
@@ -320,67 +318,129 @@ class Controller:
         self.selected_cell = artist
         panel.currCell=artist
 
-        if panel.dataPanel is not None:
+        if panel.dataPanel is not None and panel.currCell is not None:
             self.write_cellData(panel)
+            self.write_tpamData(panel)
         panel.canvas.draw()
     # write data box if cell is selected
 
     def write_cellData(self, panel):
-        if isinstance(panel, MapPlotPanel):
-            controlPanel = panel.controlPanel
-            cell = panel.currCell
-            dataPanel: MapdataPanel = panel.dataPanel
-        elif isinstance(panel, MapParentPanel):
-            controlPanel = panel.controlPanel
-            dataPanel = panel.plotPanel.dataPanel
-        if dataPanel is not None:
-            responses = self.MapModel.get_responseNames()
-            resp_targ = str(controlPanel.respDrop.GetStringSelection()) + \
-                "_"+(controlPanel.tgtDrop.GetStringSelection())
-            dataView = dataPanel.dataView
-            simIndex = self.find_currSimIndex(controlPanel)
-            stepsPerDay = self.MapModel.get_timeParams()[1]
-            timeStep = controlPanel.timeSpin.GetValue()
+        if panel.currCell is not None:
+            if isinstance(panel, MapPlotPanel):
+                controlPanel = panel.controlPanel
+                cell = panel.currCell
+                dataPanel: MapdataPanel = panel.dataPanel
+            elif isinstance(panel, MapParentPanel):
+                controlPanel = panel.controlPanel
+                dataPanel = panel.plotPanel.dataPanel
+            if dataPanel is not None:
+                responses = self.MapModel.get_responseNames()
+                resp_targ = str(controlPanel.respDrop.GetStringSelection()) + \
+                    "_"+(controlPanel.tgtDrop.GetStringSelection())
+                dataView = dataPanel.dataView
+                simIndex = self.find_currSimIndex(controlPanel)
+                stepsPerDay = self.MapModel.get_timeParams()[1]
+                timeStep = controlPanel.timeSpin.GetValue()
 
-            timeIndex = round(timeStep*stepsPerDay)
-            # response = controlFrame.get_respDropDownIndex()
-            vorCells = self.MapModel.get_vorCells()
-            densityOn = 0
-            scaleFac = 1
-            cellNum = cell.get_cellNum()
-            dataView.Clear()
-            filterStr = ""
-            underPos = resp_targ.find('_')
-            print("filter mode", dataPanel.filterMode)
-            if dataPanel.filterMode == 'Single':
-                filterStr = resp_targ
+                timeIndex = round(timeStep*stepsPerDay)
+                # response = controlFrame.get_respDropDownIndex()
+                vorCells = self.MapModel.get_vorCells()
+                densityOn = 0
+                scaleFac = 1
+                cellNum = cell.get_cellNum()
+                dataView.Clear()
+                filterStr = ""
+                underPos = resp_targ.find('_')
+                print("filter mode", dataPanel.filterMode)
+                if dataPanel.filterMode == 'Single':
+                    filterStr = resp_targ
 
-            elif dataPanel.filterMode == 'Response':
-                filterStr = resp_targ[:underPos]
+                elif dataPanel.filterMode == 'Response':
+                    filterStr = resp_targ[:underPos]
 
-            elif dataPanel.filterMode == 'Target':
-                filterStr = resp_targ[underPos:]
+                elif dataPanel.filterMode == 'Target':
+                    filterStr = resp_targ[underPos:]
 
-            for index, response in enumerate(responses):
-                data = self.MapModel.get_dataBySimTimeCellResp(
-                    simIndex, timeIndex, cellNum, index)
-                if densityOn:
-                    area = vorCells[cellNum-1].area
-                    data = (data*scaleFac)/area
+                for index, response in enumerate(responses):
+                    data = self.MapModel.get_dataBySimTimeCellResp(
+                        simIndex, timeIndex, cellNum, index)
+                    if densityOn:
+                        area = vorCells[cellNum-1].area
+                        data = (data*scaleFac)/area
 
-                dataLine = response+": "+"{0:.2f}".format(data)+"\n"
-                if response == resp_targ:
-                    dataView.write(dataLine)
-                elif filterStr in response:
-                    # if index==currResponse:
-                    #     print("should be bold")
-                    #     textwidget.config(font=bFont)
-                    # else:
-                    #     textwidget.config(font=nFont)
-                    dataView.write(dataLine)
-            # dataFrame.view_currLine()
-            # dataFrame.write_selectedLabel(cell)
+                    dataLine = response+": "+"{0:.2f}".format(data)+"\n"
+                    if response == resp_targ:
+                        dataView.write(dataLine)
+                    elif filterStr in response:
+                        dataView.write(dataLine)
+            
 
+    def write_tpamData(self,plotPanel):
+        dataPanel=plotPanel.dataPanel
+        controlPanel=plotPanel.controlPanel
+        tpamPanel=dataPanel.tpamGrid
+        cell=plotPanel.currCell
+
+        
+        for row in range(tpamPanel.grid.GetNumberRows()):
+            tpamPanel.grid.SetRowLabelValue(row,"")
+        tpamPanel.grid.ClearGrid()
+        if plotPanel.currCell is not None:
+            cellNum=cell.get_cellNum()
+
+            if self.tpamSlice is not None and 'c'+str(cellNum) in self.tpamSlice: 
+                cellSlice=self.tpamSlice['c'+str(cellNum)]
+                kam=cellSlice['K']
+                currRow=0
+                tpamPanel.grid.SetCellValue(currRow,0,"KAM")
+                tpamPanel.grid.SetCellValue(currRow+1,0,"Alive")
+                tpamPanel.grid.SetCellValue(currRow+1,1,"Pres Alive")
+                tpamPanel.grid.SetCellValue(currRow+1,2,"Pres Dead")
+                tpamPanel.grid.SetCellValue(currRow+1,3,"Dead")
+                currRow=currRow+2
+                tpamPanel.grid.SetRowLabelValue(currRow,"Alive")
+                tpamPanel.grid.SetRowLabelValue(currRow+1,"Dead")
+                for rIndex,row in enumerate(kam):
+                    for cIndex,col in enumerate(row):
+                        tpamPanel.grid.SetCellValue(rIndex+currRow,cIndex,str(row[cIndex]))
+                currRow=currRow+2
+                currRow=currRow+1
+                tpamPanel.grid.SetCellValue(currRow,0,"Lam")
+                currRow=currRow+1
+                tpamPanel.grid.SetRowSize(currRow,2*tpamPanel.grid.GetDefaultRowSize())
+                tpamPanel.grid.SetCellValue(currRow,0,"Moving &\nDetected")
+                tpamPanel.grid.SetCellValue(currRow,1,"Moving &\nTracked")
+                tpamPanel.grid.SetCellValue(currRow,2,"Moving &\nTracked")
+                tpamPanel.grid.SetCellValue(currRow,3,"Stopped &\nImaged")
+                tpamPanel.grid.SetCellValue(currRow,4,"Lost")
+                currRow=currRow+1
+                tpamPanel.grid.SetRowLabelValue(currRow,"Moving")
+                tpamPanel.grid.SetRowLabelValue(currRow+1,"Stopped")
+                tpamPanel.grid.SetRowLabelValue(currRow+2,"Hiding")
+                lam=cellSlice["L"]
+                for rIndex,row in enumerate(lam):
+                    for cIndex,col in enumerate(row):
+                        tpamPanel.grid.SetCellValue(rIndex+currRow,cIndex,str(row[cIndex]))
+                
+                currRow=currRow+4
+                tpamPanel.grid.SetCellValue(currRow,0,"IDAM")
+                currRow=currRow+1
+                idam=cellSlice['I']
+                col=0
+                row=0
+                for ele in idam:
+
+                    if col==5:
+                        col=0
+                        row=row+1
+                    tpamPanel.grid.SetCellValue(row+currRow,col,str(ele))
+                    col=col+1
+            else:
+                tpamPanel.grid.SetCellValue(0,0,"No Tpam data")
+        else:
+            tpamPanel.grid.SetCellValue(0,0,"No Cell Selected")
+
+        
     def initialize_respObjs(self):
         default_hue = 185
         responsesNames = self.get_reponseNames()
@@ -465,3 +525,26 @@ class Controller:
 
     def get_reponseNames(self):
         return self.MapModel.get_responseNames()
+
+    def query_tpamforSlice(self,panel,fileName):
+        controlPanel=panel
+        simId=controlPanel.simId
+        target=controlPanel.target
+        stepsPerDay = self.MapModel.get_timeParams()[1]
+        timeStep = controlPanel.timeSpin.GetValue()
+        time= round(timeStep*stepsPerDay)
+        side=0
+        if simId != self.prevSimId or time != self.prevTime\
+        or side != self.prevSide or target != self.prevTarget:
+            self.tpamSlice=self.MapModel.getTpamByTimeSideTarget(fileName,simId,time,side,target)
+            self.prevSimId=simId
+            self.prevTime=time
+            self.prevSide=side
+            self.prevTarget=target
+        
+
+        plotPanel=controlPanel.plotPanel
+        dataPanel=plotPanel.dataPanel
+        if dataPanel is not None:
+            self.write_tpamData(plotPanel)
+
