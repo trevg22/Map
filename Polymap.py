@@ -17,21 +17,20 @@ def PolygonPath(polygon):
     """Constructs a compound matplotlib path from a Shapely or GeoJSON-like
     geometric object"""
     this = Polygon(polygon)
-    assert this.geom_type == 'Polygon'
+    assert this.geom_type == "Polygon"
 
     def coding(ob):
         # The codes will be all "LINETO" commands, except for "MOVETO"s at the
         # beginning of each subpath
-        n = len(getattr(ob, 'coords', None) or ob)
+        n = len(getattr(ob, "coords", None) or ob)
         vals = ones(n, dtype=Path.code_type) * Path.LINETO
         vals[0] = Path.MOVETO
         return vals
+
     vertices = concatenate(
-        [asarray(this.exterior)[:, :2]]
-        + [asarray(r)[:, :2] for r in this.interiors])
-    codes = concatenate(
-        [coding(this.exterior)]
-        + [coding(r) for r in this.interiors])
+        [asarray(this.exterior)[:, :2]] + [asarray(r)[:, :2] for r in this.interiors]
+    )
+    codes = concatenate([coding(this.exterior)] + [coding(r) for r in this.interiors])
     return Path(vertices, codes)
 
 
@@ -40,6 +39,7 @@ class CellPatch(Patch):
     """
     A general polycurve path patch.
     """
+
     _edge_default = True
 
     def __str__(self):
@@ -74,7 +74,6 @@ class CellPatch(Patch):
 
 
 class Cell:
-
     def __init__(self, inc_poly):
         self.cell = None
         self.alpha = None

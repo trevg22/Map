@@ -1,14 +1,11 @@
 # Map Viewer
 # ColorFrame.py
-import tkinter as tk
-from tkinter import ttk
 from tkinter.ttk import LabelFrame
 
 from Response import Response
 
 
 class ColorParentFrame(LabelFrame):
-
     def __init__(self, label, view):
         self.label = label
         self.view = view
@@ -21,7 +18,7 @@ class ColorParentFrame(LabelFrame):
         self.maxEntry = ttk.Entry(self)
         self.minEntry = ttk.Entry(self)
         self.saveButton = ttk.Button(self, text="Save")
-        self.updateButton = ttk.Button(self, text='Update All')
+        self.updateButton = ttk.Button(self, text="Update All")
         self.upperThreshEntry = ttk.Entry(self)
         self.lowerThreshEntry = ttk.Entry(self)
         self.smallValPercEntry = ttk.Entry(self)
@@ -129,7 +126,9 @@ class ColorParentFrame(LabelFrame):
         self.saveButton.config(command=self.savePressed)
         self.updateButton.config(command=self.updateAll_pressed)
         self.respDropDown.bind(
-            "<<ComboboxSelected>>", lambda event: self.view.colorResponseChanged(self, event))
+            "<<ComboboxSelected>>",
+            lambda event: self.view.colorResponseChanged(self, event),
+        )
 
     def config_respDrop(self, *args, **kwargs):
         self.respDropDown.config(*args, **kwargs)

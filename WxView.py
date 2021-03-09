@@ -1,53 +1,57 @@
 # Map Viewer
 # View.py
 # Handles gui functionality and drives controller
+import _thread
 import os
-import tkinter as tk
-from tkinter import ttk
+
 import wx
-from WxFrames import MapControlPanel, MapParentPanel, MapPlotPanel, MapdataPanel,TpamGrid
-from settingsPanel import colorPanel,SettingsNotebook
+
 import settings
+from AppMenu import AppMenu
 from Controller import Controller
 from Response import Response
-from WindowManger import WindowManager
-from settingsPanel import colorPanel
-from AppMenu import AppMenu
-import _thread
+from SettingsPanel import SettingsNotebook, ColorPanel
+from WxFrames import (
+    MapControlPanel,
+    MapdataPanel,
+    MapParentPanel,
+    MapPlotPanel,
+    TpamGrid,
+)
 
 # Main gui class that has controller member
 
 
 class View(wx.Frame):
-
     def __init__(self):
         # super().__init__(wx.ID_ANY,"Map Viewer",size=(500,500))
-        super().__init__(None,size=(500,500))
+        super().__init__(None, size=(500, 500))
         self.mapController = Controller(self)
-        self.tpamFile="tpam2.json"
+        self.tpamFile = "tpam2.json"
         self.frames = []
         self.panels = []
 
     def init_mainWindow(self):
 
         frame = self
-        menuBar=AppMenu(frame,self)
+        menuBar = AppMenu(frame, self)
         self.spinup_mapDataSet(None)
         self.spawn_mapPanel(frame)
         self.spawn_dataPanel(None)
         # self.spawn_tpamGrid()
         frame.Show()
+
     # create menu bar at top
 
     def spawn_controlPanel(self, parent):
         panel = MapControlPanel(parent, self)
 
     def spawn_tpamGrid(self):
-        frame=wx.Frame(None)
-        panel=TpamGrid(frame,None)
+        frame = wx.Frame(None)
+        panel = TpamGrid(frame, None)
         frame.Show()
 
-    def spawn_dataPanel(self,event):
+    def spawn_dataPanel(self, event):
         frame = wx.Frame(None)
         dataPanel = MapdataPanel(frame, self)
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -56,9 +60,9 @@ class View(wx.Frame):
         vSizer.Add(hSizer, 1, 1, 20)
         frame.SetSizer(vSizer)
         frame.Show()
-        frame2=wx.Frame(None)
-        tpamPanel=TpamGrid(frame2,None)
-        dataPanel.tpamGrid=tpamPanel
+        frame2 = wx.Frame(None)
+        tpamPanel = TpamGrid(frame2, None)
+        dataPanel.tpamGrid = tpamPanel
         frame2.Show()
 
         for panel in self.panels:
@@ -71,13 +75,12 @@ class View(wx.Frame):
         frame = wx.Frame(None)
 
         noteBook = SettingsNotebook(self)
-        controlPanel.settingsNotebook=noteBook
-        #settingsNotebook = wx.Notebook()
+        controlPanel.settingsNotebook = noteBook
+        # settingsNotebook = wx.Notebook()
         noteBook.Create(frame)
         noteBook.OnCreate(None)
         noteBook.controlPanel = controlPanel
-        self.mapController.config_settingsNoteBook(
-            noteBook, controlPanel)
+        self.mapController.config_settingsNoteBook(noteBook, controlPanel)
         noteBook.Reparent(frame)
         hSizer = wx.BoxSizer(wx.HORIZONTAL)
         vSizer = wx.BoxSizer(wx.VERTICAL)
@@ -104,19 +107,22 @@ class View(wx.Frame):
     def spawn_plotPanel(self, parent):
         panel = MapPlotPanel(parent)
 
-
-    def spinup_mapDataSet(self,event):
+    def spinup_mapDataSet(self, event):
         cwd = os.getcwd()
 
-        with wx.FileDialog(self, "Open json file",defaultDir=cwd, 
-                       style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+        with wx.FileDialog(
+            self,
+            "Open json file",
+            defaultDir=cwd,
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        ) as fileDialog:
 
             if fileDialog.ShowModal() == wx.ID_CANCEL:
-                return     # the user changed their mind
+                return  # the user changed their mind
 
             dataFile = fileDialog.GetPath()
             try:
-                with open(dataFile, 'r') as file:
+                with open(dataFile, "r") as file:
                     pass
             except IOError:
                 wx.LogError("Cannot open file '%s'." % dataFile)
@@ -129,17 +135,19 @@ class View(wx.Frame):
         self.mapController.update_map(panel)
         # self.mapController.query_tpamforSlice(panel,self.tpamFile)
 
-    def map_timeSliderReleased(self,panel,event):
+    def map_timeSliderReleased(self, panel, event):
         self.mapController.update_map(panel)
         # self.mapController.query_tpamforSlice(panel,self.tpamFile)
-        _thread.start_new_thread(self.mapController.query_tpamforSlice,(panel,self.tpamFile))
+        _thread.start_new_thread(
+            self.mapController.query_tpamforSlice, (panel, self.tpamFile)
+        )
 
     # event capture for sim Id drop down
 
     def map_simIdDropdownChanged(self, panel, event):
         self.mapController.update_map(panel)
         plotPanel = panel.plotPanel
-        self.mapController.query_tpamforSlice(panel,self.tpamFile)
+        self.mapController.query_tpamforSlice(panel, self.tpamFile)
 
     # event capture for response drop down
 
@@ -154,10 +162,11 @@ class View(wx.Frame):
             plotPanel = panel.plotPanel
             dataPanel = plotPanel.dataPanel
 
-            self.mapController.update_legend(
-                controlPanel)
+            self.mapController.update_legend(controlPanel)
             # self.mapController.query_tpamforSlice(controlPanel,self.tpamFile)
-            _thread.start_new_thread(self.mapController.query_tpamforSlice,(panel,self.tpamFile))
+            _thread.start_new_thread(
+                self.mapController.query_tpamforSlice, (panel, self.tpamFile)
+            )
             responses = self.mapController.responses
             resp_targ = controlPanel.resp_targ
             currResp = responses[resp_targ]
@@ -169,11 +178,11 @@ class View(wx.Frame):
         if isinstance(panel, colorPanel):
             updatePanel = panel.controlPanel
         self.mapController.update_map(updatePanel)
-        self.mapController.update_legend(
-            updatePanel)
+        self.mapController.update_legend(updatePanel)
 
-    def update_legend(self,panel):
+    def update_legend(self, panel):
         self.mapController.update_legend(panel)
+
     # mouse moved event
 
     def settings_handler(self, params, func):
@@ -182,7 +191,7 @@ class View(wx.Frame):
             func(resp)
 
         elif "plotPanel" in params:
-            plotPanel=params["plotPanel"].plotPanel
+            plotPanel = params["plotPanel"].plotPanel
             func(plotPanel)
 
     def map_mouseMoved(self, panel, event):
@@ -197,7 +206,7 @@ class View(wx.Frame):
     def write_cellData(self, panel, event):
         self.mapController.write_cellData(panel)
 
-# save button was changed on color props
+    # save button was changed on color props
 
     def save_snapShot(self):
         self.mapController.snapShot()
@@ -211,8 +220,8 @@ class View(wx.Frame):
 
             for string in resp_targs:
                 if respName in string:
-                    underInd = string.rfind('_')
-                    targ = string[underInd+1:]
+                    underInd = string.rfind("_")
+                    targ = string[underInd + 1 :]
                     if targ not in targs:
                         targs.append(targ)
             oldTarg = panel.tgtDrop.GetStringSelection()

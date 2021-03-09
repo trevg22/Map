@@ -6,30 +6,25 @@ import numpy as np
 
 from Response import Response
 
-# from collections import namedtuple
-# Stores list of responses at specific cell and time
 
-
-class indepVar():
-
+class indepVar:
     def __init__(self, inc_name, inc_label):
         self.name = inc_name
         self.labels = inc_label
 
 
-class dataBy_cell_time():
-
+class dataBy_cell_time:
     def __init__(self, inc_dataLine, inc_cell, inc_time):
         self.dataLine = inc_dataLine
         self.cell = inc_cell
         self.time = inc_time
 
+
 # namedtuple('dataBy_cell_time', 'dataLine cell time')
 # Stores a grid of dataBy_cell_time that is timesteps x numCells
 
 
-class simInst():
-
+class simInst:
     def __init__(self, inc_simPrefix, inc_numCells, inc_timesteps):
 
         self.numCells = inc_numCells
@@ -42,32 +37,31 @@ class simInst():
         cell = int(cell)
         timeIndex = self.timeSteps.index(time)
         if self.simGrid[timeIndex] is None:
-            cellArr = [None]*numCells
+            cellArr = [None] * numCells
             self.simGrid[timeIndex] = cellArr
         self.simGrid[timeIndex][cell] = dataBy_cell_time(dataLine, cell, time)
-
 
     def set_responses(self, responses):
         self.responses = responses
 
     def get_simPrefix(self):
         return self.simPrefix
+
+
 # Poplulats list of simInst objects from JSON
 
 
 class Reader:
-
     def __init__(self):
-        self.isTpam=False
+        self.isTpam = False
 
     def readMav_file(self, file):
-        self.file=file
+        self.file = file
         start = timeit.timeit()
-        with open(file, 'r') as f:
+        with open(file, "r") as f:
             data = json.load(f)
             if "tpam" in data:
-                self.isTpam=True
-
+                self.isTpam = True
 
         # self.readColorJson("colors.json")
         self.simList = []
@@ -82,11 +76,11 @@ class Reader:
         self.names = list(data["map-viewer"]["variables"].keys())[:numVars]
         self.labels = list(data["map-viewer"]["variables"].values())[:numVars]
 
-#        numResponses = len(data["impact-viewer"]["groups"])
+        #        numResponses = len(data["impact-viewer"]["groups"])
         self.responses = list(data["map-viewer"]["groups"].values())
         # print(self.responses)
         prevSim = None
-        startIndex = numVars+2
+        startIndex = numVars + 2
         for dataLine in data["map-viewer"]["values"]:
 
             count = 0
@@ -98,19 +92,26 @@ class Reader:
             # Create new simInst if none exist
             if len(self.simList) == 0:
 
-                self.simList.append(
-                    simInst(simPrefix, self.numCells, self.timeSteps))
+                self.simList.append(simInst(simPrefix, self.numCells, self.timeSteps))
                 prevSim = self.simList[0]
                 self.simList[0].set_responses(self.responses)
                 prevSim.addElement(
-                    dataLine[startIndex:], dataLine[numVars + 1], dataLine[numVars], self.numCells)
+                    dataLine[startIndex:],
+                    dataLine[numVars + 1],
+                    dataLine[numVars],
+                    self.numCells,
+                )
 
             else:
                 # if Incoming data belongs to same sim as previous data,
                 # no need to loop
                 if simPrefix == prevSim.simPrefix:
                     prevSim.addElement(
-                        dataLine[startIndex:], dataLine[numVars + 1], dataLine[numVars], self.numCells)
+                        dataLine[startIndex:],
+                        dataLine[numVars + 1],
+                        dataLine[numVars],
+                        self.numCells,
+                    )
 
                 else:
                     # Locate simInst data belongs to, short circuit with found
@@ -118,22 +119,31 @@ class Reader:
                         if self.simList[count].simPrefix == simPrefix:
                             # this addElement will pass in dataLine as an int not a list
                             self.simList[count].addElement(
-                                dataLine[startIndex:], dataLine[numVars + 1], dataLine[numVars], self.numCells)
+                                dataLine[startIndex:],
+                                dataLine[numVars + 1],
+                                dataLine[numVars],
+                                self.numCells,
+                            )
                             prevSim = self.simList[count]
                             found = True
                         count = count + 1
 
                     if found is False:
                         self.simList.append(
-                            simInst(simPrefix, self.numCells, self.timeSteps))
+                            simInst(simPrefix, self.numCells, self.timeSteps)
+                        )
                         self.simList[-1].addElement(
-                            dataLine[startIndex:], dataLine[numVars + 1], dataLine[numVars], self.numCells)
+                            dataLine[startIndex:],
+                            dataLine[numVars + 1],
+                            dataLine[numVars],
+                            self.numCells,
+                        )
                         found = True
 
         self.print_SimInst(self.simList)
         self.validate_data()
         end = timeit.timeit()
-        print("data read in", end-start, "seconds")
+        print("data read in", end - start, "seconds")
         return self.simList
 
     def validate_data(self):
@@ -146,8 +156,15 @@ class Reader:
             for cell in range(self.numCells):
 
                 if simInst.simGrid[time][cell] is None:
-                    print("Sim with Prefix", simInst.simPrefix,
-                          "missing", "time:", time, "cell", cell)
+                    print(
+                        "Sim with Prefix",
+                        simInst.simPrefix,
+                        "missing",
+                        "time:",
+                        time,
+                        "cell",
+                        cell,
+                    )
 
     def print_SimInst(self, simList):
         print("simulations")
@@ -190,20 +207,27 @@ class Reader:
 
         return self.indVars
 
-    
-    def query_tpamforSlice(self,fileName,simId,timeIndex,side,target):
+    def query_tpamforSlice(self, fileName, simId, timeIndex, side, target):
         print("tpam queried")
-        if self.isTpam: 
-            with open(self.file,'r') as f:
-                data=json.load(f)
-                data=data["tpam"]
-                targets=list(data["targets"])
-                targIndex=0
-                for index,targ in enumerate(targets):
-                    if targ[0]==target:
-                        targIndex=index
+        if self.isTpam:
+            with open(self.file, "r") as f:
+                data = json.load(f)
+                data = data["tpam"]
+                targets = list(data["targets"])
+                targIndex = 0
+                for index, targ in enumerate(targets):
+                    if targ[0] == target:
+                        targIndex = index
 
-                id=str(simId)+"_"+str(timeIndex)+"_"+str(side)+"_"+str(targIndex)
+                id = (
+                    str(simId)
+                    + "_"
+                    + str(timeIndex)
+                    + "_"
+                    + str(side)
+                    + "_"
+                    + str(targIndex)
+                )
                 if data[id] is not None and data is not False:
                     return data[id]
                 else:

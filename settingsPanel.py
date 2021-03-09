@@ -2,24 +2,23 @@ import wx
 
 
 class SettingsNotebook(wx.Notebook):
-
     def __init__(self, view):
         self.view = view
         print("notebook started")
         super().__init__()
         self._colorPanel = None
         self._controlPanel = None
-        self._plotPanel=None
+        self._plotPanel = None
         # self.Bind(wx.EVT_WINDOW_CREATE, self.OnCreate)
         # self.AddPage(self.colorPanel, "Color")
         # print("Notebook created")
 
     def OnCreate(self, event):
         self._colorPanel = colorPanel(self, self.view)
-        self._plotPanel=plotSettingsPanel(self,self.view)
-        self.AddPage(self._plotPanel,'Plot')
-        self.AddPage(self._colorPanel, 'Color')
-        print("control panel set to",self._controlPanel)
+        self._plotPanel = PlotSettingsPanel(self, self.view)
+        self.AddPage(self._plotPanel, "Plot")
+        self.AddPage(self._colorPanel, "Color")
+        print("control panel set to", self._controlPanel)
 
     @property
     def colorPanel(self):
@@ -33,11 +32,10 @@ class SettingsNotebook(wx.Notebook):
     def controlPanel(self, panel):
         self._controlPanel = panel
         self.colorPanel.controlPanel = panel
-        self._plotPanel._controlPanel=panel
+        self._plotPanel._controlPanel = panel
 
 
-class colorPanel(wx.Panel):
-
+class ColorPanel(wx.Panel):
     def __init__(self, parent, view):
         super().__init__(parent=parent)
         self.view = view
@@ -53,7 +51,7 @@ class colorPanel(wx.Panel):
         self.respDrop = wx.ComboBox(self)
         self.tgtDrop = wx.ComboBox(self)
         self.colorScaleDrop = wx.ComboBox(self)
-        self.save = wx.Button(self,label="apply")
+        self.save = wx.Button(self, label="apply")
         col0 = wx.BoxSizer(wx.HORIZONTAL)
         col1 = wx.BoxSizer(wx.HORIZONTAL)
         col2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -73,11 +71,11 @@ class colorPanel(wx.Panel):
     def bind_widgets(self):
         self.save.Bind(wx.EVT_BUTTON, lambda event: self.save_pressed(event))
         self.respDrop.Bind(
-            wx.EVT_COMBOBOX, lambda event: self.view.filter_drop(self, event))
+            wx.EVT_COMBOBOX, lambda event: self.view.filter_drop(self, event)
+        )
 
     def config_defaults(self):
-        colorScaleChoices = ['viridis', 'plasma',
-                             'inferno', 'magma', 'cividis']
+        colorScaleChoices = ["viridis", "plasma", "inferno", "magma", "cividis"]
         self.colorScaleDrop.AppendItems(colorScaleChoices)
 
     def save_pressed(self, event):
@@ -93,7 +91,9 @@ class colorPanel(wx.Panel):
 
     @property
     def resp_targ(self):
-        resp = self.respDrop.GetStringSelection()+"_"+self.tgtDrop.GetStringSelection()
+        resp = (
+            self.respDrop.GetStringSelection() + "_" + self.tgtDrop.GetStringSelection()
+        )
         return resp
 
     @property
@@ -104,58 +104,63 @@ class colorPanel(wx.Panel):
     def controlPanel(self, panel):
         self._controlPanel = panel
 
-class plotSettingsPanel(wx.Panel):
 
-    def __init__(self,parent,view):
+class PlotSettingsPanel(wx.Panel):
+    def __init__(self, parent, view):
         super().__init__(parent=parent)
-        self.view=view
+        self.view = view
         self.place_widgets()
         self.config_defaults()
         self.bind_widgets()
-        self._controlPanel=None
+        self._controlPanel = None
 
     def place_widgets(self):
-        grid=wx.FlexGridSizer(2,3,5)
-        legendLabel=wx.StaticText(self,label="Legend:")
-        locLabel=wx.StaticText(self,label="Location")
-        self.locDrop=wx.ComboBox(self)
-        blank=wx.StaticText(self,label="")
-        numThreshLabel=wx.StaticText(self,label="Entries")
-        self.numThreshDrop=wx.ComboBox(self)
+        grid = wx.FlexGridSizer(2, 3, 5)
+        legendLabel = wx.StaticText(self, label="Legend:")
+        locLabel = wx.StaticText(self, label="Location")
+        self.locDrop = wx.ComboBox(self)
+        blank = wx.StaticText(self, label="")
+        numThreshLabel = wx.StaticText(self, label="Entries")
+        self.numThreshDrop = wx.ComboBox(self)
 
-        grid.Add(legendLabel,0,0,5)
-        grid.Add(blank,0,0,5)
-        grid.Add(locLabel,0,0,5)
-        grid.Add(self.locDrop,0,0,5)
-        grid.Add(numThreshLabel,0,0,5)
-        grid.Add(self.numThreshDrop,0,0,5)
+        grid.Add(legendLabel, 0, 0, 5)
+        grid.Add(blank, 0, 0, 5)
+        grid.Add(locLabel, 0, 0, 5)
+        grid.Add(self.locDrop, 0, 0, 5)
+        grid.Add(numThreshLabel, 0, 0, 5)
+        grid.Add(self.numThreshDrop, 0, 0, 5)
 
         self.SetSizer(grid)
 
     def config_defaults(self):
-        legendLocs=['upper left', 'upper right',
-                  'lower left', 'lower right', 'none']
+        legendLocs = ["upper left", "upper right", "lower left", "lower right", "none"]
         self.locDrop.AppendItems(legendLocs)
 
-        threshNums=list(range(2,6))
-        threshNums=[str(x) for x in threshNums]
+        threshNums = list(range(2, 6))
+        threshNums = [str(x) for x in threshNums]
         self.numThreshDrop.AppendItems(threshNums)
+
     def bind_widgets(self):
-        self.locDrop.Bind(wx.EVT_COMBOBOX,lambda event: self.widget_updated(self.update_legendLoc,event))
-        self.numThreshDrop.Bind(wx.EVT_COMBOBOX,lambda event: self.widget_updated(self.update_numThresh,event))
+        self.locDrop.Bind(
+            wx.EVT_COMBOBOX,
+            lambda event: self.widget_updated(self.update_legendLoc, event),
+        )
+        self.numThreshDrop.Bind(
+            wx.EVT_COMBOBOX,
+            lambda event: self.widget_updated(self.update_numThresh, event),
+        )
         print("widgets bound")
 
-    def widget_updated(self,func,event):
-        params={}
-        params["plotPanel"]=self._controlPanel
-        self.view.settings_handler(params,func)
+    def widget_updated(self, func, event):
+        params = {}
+        params["plotPanel"] = self._controlPanel
+        self.view.settings_handler(params, func)
         print("widget update called")
 
-    def update_legendLoc(self,plotPanel):
-        plotPanel.legendLoc=self.locDrop.GetStringSelection()
+    def update_legendLoc(self, plotPanel):
+        plotPanel.legendLoc = self.locDrop.GetStringSelection()
         self.view.update_legend(self._controlPanel)
 
-    def update_numThresh(self,plotPanel):
-        plotPanel.numThresh=int(self.numThreshDrop.GetStringSelection())
+    def update_numThresh(self, plotPanel):
+        plotPanel.numThresh = int(self.numThreshDrop.GetStringSelection())
         self.view.update_legend(self._controlPanel)
-        

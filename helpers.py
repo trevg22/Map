@@ -11,14 +11,13 @@ from shapely.geometry import Polygon
 
 # return a random rgba list
 def random_color(as_str=False, alpha=0.5):
-    rgb = [random.randint(0, 255),
-           random.randint(0, 255),
-           random.randint(0, 255)]
+    rgb = [random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]
     if as_str:
-        return "rgba"+str(tuple(rgb+[alpha]))
+        return "rgba" + str(tuple(rgb + [alpha]))
     else:
         # Normalize & listify
-        return list(np.array(rgb)/255) + [alpha]
+        return list(np.array(rgb) / 255) + [alpha]
+
 
 # take scipy vor and bound infinite regions
 
@@ -33,7 +32,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 
     center = vor.points.mean(axis=0)
     if radius is None:
-        radius = vor.points.ptp().max()*2
+        radius = vor.points.ptp().max() * 2
 
     # Construct a map containing all ridges for a given point
     all_ridges = {}
@@ -85,6 +84,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 
     return new_regions, np.asarray(new_vertices)
 
+
 # make up data points
 # compute Voronoi tesselation
 
@@ -102,8 +102,9 @@ def get_vorPolys(vorPoints, boundPoints):
 
     # if no bounPoints draw rectantle as bounding polygon
     if not boundPoints:
-        boundPoly = Polygon([[min_x, min_y], [max_x, min_y], [
-                            max_x, max_y], [min_x, max_y]])
+        boundPoly = Polygon(
+            [[min_x, min_y], [max_x, min_y], [max_x, max_y], [min_x, max_y]]
+        )
 
     regions, vertices = voronoi_finite_polygons_2d(vor)
 
@@ -122,7 +123,7 @@ def get_vorPolys(vorPoints, boundPoints):
 
 def wgs84_toMercator(lon, lat):
     x = lon
-    radLat = (lat/360)*2*math.pi
+    radLat = (lat / 360) * 2 * math.pi
     y = math.tan(radLat)
 
     return (x, y)
@@ -136,8 +137,7 @@ def wgs84_toMercater_coords(coords):
 def wgs84_toMercater_poly(poly):
     x, y = poly.exterior.coords.xy
     coords = zip(x, y)
-    merc_coords = [wgs84_toMercator(coord[0], coord[1])
-                   for coord in tuple(coords)]
+    merc_coords = [wgs84_toMercator(coord[0], coord[1]) for coord in tuple(coords)]
     return Polygon(merc_coords)
 
 
@@ -148,18 +148,17 @@ def convPolygs84_toMerc(polygons):
 
 def wgs84_toCart_coords(lon, lat):
     r = 6371  # km
-    c = 2*math.pi*r
-    x = lon*c/360
-    y = lat*c/180
-    return(x, y)
+    c = 2 * math.pi * r
+    x = lon * c / 360
+    y = lat * c / 180
+    return (x, y)
 
 
 def wgs84_toCartesion_poly(poly):
 
     x, y = poly.exterior.coords.xy
     coords = zip(x, y)
-    cart_coords = [wgs84_toCart_coords(coord[0], coord[1])
-                   for coord in tuple(coords)]
+    cart_coords = [wgs84_toCart_coords(coord[0], coord[1]) for coord in tuple(coords)]
     return Polygon(cart_coords)
 
 
@@ -175,14 +174,14 @@ def get_area_wgs84(poly):
 def moveCoords(lon_offset, lat_offset, coords):
 
     for coord in coords:
-        newLon = coord[0]+lon_offset
+        newLon = coord[0] + lon_offset
 
         if newLon > 180:
-            newLon = newLon-360
+            newLon = newLon - 360
 
         elif newLon < -180:
-            newLon = newLon+360
+            newLon = newLon + 360
 
         coord[0] = newLon
         # coord[0]=coord[0]+lon_offset
-        coord[1] = coord[1]+lat_offset
+        coord[1] = coord[1] + lat_offset

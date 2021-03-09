@@ -1,23 +1,22 @@
 # Map Viewer
 # Classes to handle response functionality
-from matplotlib import cm
-from matplotlib import colors
 import colorsys
+
+from matplotlib import cm, colors
 
 # a cell response metric
 
 
 class Response:
-
     def __init__(self):
         self.name = ""
         self.min = None
         self.max = 0
         self.hue = None
         self.type = None
-        self.upperThresh = .9  # maximum light value to avoid moving to black
-        self.lowerThresh = .2
-        self.smallValPerc = .0001
+        self.upperThresh = 0.9  # maximum light value to avoid moving to black
+        self.lowerThresh = 0.2
+        self.smallValPerc = 0.0001
         self.index = 0
 
     def find_respMax(self, simList, response):
@@ -49,16 +48,16 @@ class Response:
 
     def gen_colorLinear(self, data):
         # Hue value from HSL color standard(0-360 degrees)
-        hueFrac = self.hue/360  # normalize hue
+        hueFrac = self.hue / 360  # normalize hue
         sat = 1  # represents 100 percent
         if self.max > 0 and data is not None:
             # lightness = (1-(data/self.max)*threshold)
 
-            if data >= self.max*self.smallValPerc and data < self.max:
-                delta = self.upperThresh-self.lowerThresh
-                lightness = (1-(data/self.max))*delta+self.lowerThresh
+            if data >= self.max * self.smallValPerc and data < self.max:
+                delta = self.upperThresh - self.lowerThresh
+                lightness = (1 - (data / self.max)) * delta + self.lowerThresh
                 color = colorsys.hls_to_rgb(hueFrac, lightness, sat)
-            elif data < self.max*self.smallValPerc:
+            elif data < self.max * self.smallValPerc:
                 color = [1, 1, 1]
             elif data >= self.max:
                 color = colorsys.hls_to_rgb(hueFrac, self.lowerThresh, sat)
@@ -73,7 +72,7 @@ class Response:
 
     def gen_cmapColor(self, data):
         if self.max > 0 and data is not None:
-            if data > self.max*self.smallValPerc:
+            if data > self.max * self.smallValPerc:
                 normData = self.normalizer(data)
                 color = self.cmap(normData)
             else:
