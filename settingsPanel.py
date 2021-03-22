@@ -1,4 +1,5 @@
 import wx
+import settings
 
 
 class SettingsNotebook(wx.Notebook):
@@ -14,7 +15,7 @@ class SettingsNotebook(wx.Notebook):
         # print("Notebook created")
 
     def OnCreate(self, event):
-        self._colorPanel = colorPanel(self, self.view)
+        self._colorPanel = ColorPanel(self, self.view)
         self._plotPanel = PlotSettingsPanel(self, self.view)
         self.AddPage(self._plotPanel, "Plot")
         self.AddPage(self._colorPanel, "Color")
@@ -115,13 +116,15 @@ class PlotSettingsPanel(wx.Panel):
         self._controlPanel = None
 
     def place_widgets(self):
-        grid = wx.FlexGridSizer(2, 3, 5)
+        grid = wx.FlexGridSizer(2, 4, 5)
         legendLabel = wx.StaticText(self, label="Legend:")
         locLabel = wx.StaticText(self, label="Location")
         self.locDrop = wx.ComboBox(self)
         blank = wx.StaticText(self, label="")
         numThreshLabel = wx.StaticText(self, label="Entries")
         self.numThreshDrop = wx.ComboBox(self)
+        showCellLabel=wx.StaticText(self,label="Cell Nums")
+        self.cellNumsCheck=wx.CheckBox(self)
 
         grid.Add(legendLabel, 0, 0, 5)
         grid.Add(blank, 0, 0, 5)
@@ -129,6 +132,8 @@ class PlotSettingsPanel(wx.Panel):
         grid.Add(self.locDrop, 0, 0, 5)
         grid.Add(numThreshLabel, 0, 0, 5)
         grid.Add(self.numThreshDrop, 0, 0, 5)
+        grid.Add(showCellLabel,0,0,5)
+        grid.Add(self.cellNumsCheck,0,0,5)
 
         self.SetSizer(grid)
 
@@ -139,6 +144,9 @@ class PlotSettingsPanel(wx.Panel):
         threshNums = list(range(2, 6))
         threshNums = [str(x) for x in threshNums]
         self.numThreshDrop.AppendItems(threshNums)
+        self.cellNumsCheck.SetValue(settings.showCellNums)
+        self.locDrop.ChangeValue(settings.defLegendLoc)
+        self.numThreshDrop.ChangeValue(str(settings.numLegendEntries))
 
     def bind_widgets(self):
         self.locDrop.Bind(
@@ -149,6 +157,8 @@ class PlotSettingsPanel(wx.Panel):
             wx.EVT_COMBOBOX,
             lambda event: self.widget_updated(self.update_numThresh, event),
         )
+
+        self.cellNumsCheck.Bind(wx.EVT_CHECKBOX,lambda event:self.widget_updated(self.update_cellNums,event))
         print("widgets bound")
 
     def widget_updated(self, func, event):
@@ -164,3 +174,8 @@ class PlotSettingsPanel(wx.Panel):
     def update_numThresh(self, plotPanel):
         plotPanel.numThresh = int(self.numThreshDrop.GetStringSelection())
         self.view.update_legend(self._controlPanel)
+
+    def update_cellNums(self,plotPanel):
+        showCellNums=self.cellNumsCheck.GetValue()
+        self.view.update_map(self._controlPanel,showCellNums=showCellNums)
+        

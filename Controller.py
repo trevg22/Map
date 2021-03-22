@@ -57,7 +57,7 @@ class Controller:
     # config widgets based on data input
     def config_widgets(self, frames):
         for frame in frames:
-            if isinstance(frame, MapParentFrame):
+            if isinstance(frame, MapParentPanel):
                 self.config_mapPlot(frame)
                 self.config_mapWidgets(frame.controlFrame)
 
@@ -91,7 +91,6 @@ class Controller:
         panel.place_widgets()
         panel.bind_widgets()
         resp_targs = self.MapModel.get_responseNames()
-        self.query_tpamforSlice(panel, "tpam2.json")
         timeRange, stepsPerDay = self.MapModel.get_timeParams()
         timeSliderRes = 1 / stepsPerDay
         panel.timeSlider.SetMin(timeRange[0])
@@ -170,10 +169,12 @@ class Controller:
         plotPanel.ax.add_feature(BORDERS)
         plotPanel.ax.add_feature(states_provinces, edgecolor="gray", facecolor="none")
 
+        if settings.showCellNums:
+            self.plot_cellNums(plotPanel,settings.showCellNums)
+
     # update map based on control widget values
 
     def update_map(self, panel):
-        print("updating map with", type(panel))
         if isinstance(panel, MapControlPanel):
             plotPanel: MapPlotPanel = panel.plotPanel
             controlPanel: MapControlPanel = panel
@@ -182,14 +183,14 @@ class Controller:
             plotPanel: MapPlotPanel = panel.plotPanel
             controlPanel: MapControlPanel = panel.controlPanel
 
-        plotPanel.patchAlphas = 0.3
+        plotPanel.patchAlphas = .3
 
         vorCells = self.MapModel.get_vorCells()
         numCells = len(vorCells)
         responses = self.responses
         simIndex = self.find_currSimIndex(controlPanel)
         timeRange, stepsPerDay = self.MapModel.get_timeParams()
-        timeStep = controlPanel.timeSpin.GetValue()
+        timeStep = controlPanel.time
         densityOn = 0
         timeIndex = round(timeStep * stepsPerDay)
 
@@ -224,17 +225,6 @@ class Controller:
             bottom=0, top=1, left=0, right=1, wspace=0, hspace=0
         )
         plotPanel.canvas.draw()
-
-        # resp = responses[responseIndex]
-        # ax = plotPanel.ax
-        # fig = plotPanel.figure
-        # cax = fig.add_axes([.27, .8, .5, .05])
-        # ax.colorbar(cm.ScalarMappable(norm=resp.normalizer,
-        #                              cmap=resp.cmapStr), cax=ax, orientation='horizontal', loc=11)
-        # ax.colorbar(
-
-        # print("axes", ax)
-        # ax.figure.colorbar(norm=resp.normalizer, cmap=resp.cmapStr, ax=ax)
 
     # create/update legend based on param values
 
@@ -347,7 +337,7 @@ class Controller:
                 dataView = dataPanel.dataView
                 simIndex = self.find_currSimIndex(controlPanel)
                 stepsPerDay = self.MapModel.get_timeParams()[1]
-                timeStep = controlPanel.timeSpin.GetValue()
+                timeStep = controlPanel.time
 
                 timeIndex = round(timeStep * stepsPerDay)
                 # response = controlFrame.get_respDropDownIndex()
@@ -387,22 +377,91 @@ class Controller:
         controlPanel = plotPanel.controlPanel
         tpamPanel = dataPanel.tpamGrid
         cell = plotPanel.currCell
-
+        target=controlPanel.target
+        time=controlPanel.time
+        font=tpamPanel.grid.GetDefaultCellFont()
+        bFont=font.MakeBold()
         for row in range(tpamPanel.grid.GetNumberRows()):
             tpamPanel.grid.SetRowLabelValue(row, "")
         tpamPanel.grid.ClearGrid()
         if plotPanel.currCell is not None:
             cellNum = cell.get_cellNum()
 
+            currRow=0
+            tpamPanel.grid.SetCellValue(currRow,0,"Target")
+            tpamPanel.grid.SetCellValue(currRow,1,str(target))
+            tpamPanel.grid.SetCellValue(currRow,2,"Cell#")
+            tpamPanel.grid.SetCellValue(currRow,3,str(cellNum))
+            tpamPanel.grid.SetCellValue(currRow,4,"TimeStep")
+            tpamPanel.grid.SetCellValue(currRow,5,str(time))
+            currRow=currRow+2
+
+            
+            #write out lam/kam/idam for cellNum
             if self.tpamSlice is not None and "c" + str(cellNum) in self.tpamSlice:
                 cellSlice = self.tpamSlice["c" + str(cellNum)]
+
+                nc=self.tpamSlice["nc"]
+                cells=nc['c']
+                m=nc['m']
+                stride=len(cells)+2
+
+                tpamPanel.grid.SetCellFont(currRow,0,bFont)
+                tpamPanel.grid.SetCellValue(currRow,0,"Nieghbors")
+                tpamPanel.grid.SetCellFont(currRow+1,0,bFont)
+                tpamPanel.grid.SetCellValue(currRow+1,0,"TruAlive")
+                tpamPanel.grid.SetCellFont(currRow+2,0,bFont)
+                tpamPanel.grid.SetCellValue(currRow+2,0,"PerAlive")
+                if cellNum in cells:
+                    currCellIndex=cells.index(cellNum)
+                    rowIndex=stride*currCellIndex
+                    col=1
+                    print("neighbors: ",cell.cell.neighbors)
+                    print("cells: ",cells)
+
+                    for nieghbor in cell.cell.neighbors:
+                        
+                        if nieghbor in cells:
+                            print(nieghbor,"in cells")    
+                            colIndex=cells.index(nieghbor)
+                            tpamPanel.grid.SetCellValue(currRow,col,str(nieghbor))
+                            tpamPanel.grid.SetCellValue(currRow+1,col,str(m[rowIndex+colIndex]))
+                            tpamPanel.grid.SetCellValue(currRow+2,col,str(m[currCellIndex+col*stride]))
+                            
+                            col=col+1
+                        else:
+                            print(nieghbor,"not in cells")
+                    neighLen=len(cell.cell.neighbors)
+                    print("rowIndex",rowIndex)
+                    print("neighbor len",neighLen)
+                    tpamPanel.grid.SetCellValue(currRow,col+1,"Undiscovered")
+                    tpamPanel.grid.SetCellValue(currRow+1,col+1,str(m[rowIndex+stride-2]))
+                    tpamPanel.grid.SetCellValue(currRow,col+2,"Unaware")
+                    tpamPanel.grid.SetCellValue(currRow+1,col+2,str(m[rowIndex+stride-1]))
+
+                    tpamPanel.grid.SetCellValue(currRow,col,"False Target")
+                    tpamPanel.grid.SetCellValue(currRow+2,col,str(m[len(cells)*stride+currCellIndex]))
+                else:
+                    print("cell not in miniclam")
+                    return
+
+                currRow=currRow+4
                 kam = cellSlice["K"]
-                currRow = 0
+                tpamPanel.grid.SetCellFont(currRow,0,bFont)
                 tpamPanel.grid.SetCellValue(currRow, 0, "KAM")
+
+                tpamPanel.grid.SetCellFont(currRow+1,0,bFont)
                 tpamPanel.grid.SetCellValue(currRow + 1, 0, "Alive")
+
+                tpamPanel.grid.SetCellFont(currRow+1,1,bFont)
                 tpamPanel.grid.SetCellValue(currRow + 1, 1, "Pres Alive")
+
+                tpamPanel.grid.SetCellFont(currRow+1,2,bFont)
                 tpamPanel.grid.SetCellValue(currRow + 1, 2, "Pres Dead")
+
+                tpamPanel.grid.SetCellFont(currRow+1,3,bFont)
                 tpamPanel.grid.SetCellValue(currRow + 1, 3, "Dead")
+
                 currRow = currRow + 2
                 tpamPanel.grid.SetRowLabelValue(currRow, "Alive")
                 tpamPanel.grid.SetRowLabelValue(currRow + 1, "Dead")
@@ -413,15 +472,27 @@ class Controller:
                         )
                 currRow = currRow + 2
                 currRow = currRow + 1
+
+                tpamPanel.grid.SetCellFont(currRow,0,bFont)
                 tpamPanel.grid.SetCellValue(currRow, 0, "Lam")
+
                 currRow = currRow + 1
                 tpamPanel.grid.SetRowSize(
                     currRow, 2 * tpamPanel.grid.GetDefaultRowSize()
                 )
+                tpamPanel.grid.SetCellFont(currRow,0,bFont)
                 tpamPanel.grid.SetCellValue(currRow, 0, "Moving &\nDetected")
+
+                tpamPanel.grid.SetCellFont(currRow,1,bFont)
                 tpamPanel.grid.SetCellValue(currRow, 1, "Moving &\nTracked")
+
+                tpamPanel.grid.SetCellFont(currRow,2,bFont)
                 tpamPanel.grid.SetCellValue(currRow, 2, "Moving &\nTracked")
+
+                tpamPanel.grid.SetCellFont(currRow,3,bFont)
                 tpamPanel.grid.SetCellValue(currRow, 3, "Stopped &\nImaged")
+
+                tpamPanel.grid.SetCellFont(currRow,4,bFont)
                 tpamPanel.grid.SetCellValue(currRow, 4, "Lost")
                 currRow = currRow + 1
                 tpamPanel.grid.SetRowLabelValue(currRow, "Moving")
@@ -436,17 +507,18 @@ class Controller:
 
                 currRow = currRow + 4
                 tpamPanel.grid.SetCellValue(currRow, 0, "IDAM")
+                tpamPanel.grid.SetCellValue(currRow, 1, "tgt : val")
                 currRow = currRow + 1
                 idam = cellSlice["I"]
                 col = 0
                 row = 0
-                for ele in idam:
-
-                    if col == 5:
-                        col = 0
-                        row = row + 1
-                    tpamPanel.grid.SetCellValue(row + currRow, col, str(ele))
-                    col = col + 1
+                for index,ele in enumerate(idam):
+                    if ele >0 or ele <0:
+                        if col == 5:
+                            col = 0
+                            row = row + 1
+                        tpamPanel.grid.SetCellValue(row + currRow, col,str(index)+" : "+ str(ele))
+                        col = col + 1
             else:
                 tpamPanel.grid.SetCellValue(0, 0, "No Tpam data")
         else:
@@ -531,8 +603,28 @@ class Controller:
 
     def plot_cellPatches(self, frame):
         vorCells = self.MapModel.get_vorCells()
-        frame.plot_cellPatches(self.create_cellPatches(vorCells))
+        self.cellPatches=self.create_cellPatches(vorCells)
+        frame.plot_cellPatches(self.cellPatches)
 
+
+    def plot_cellNums(self,panel,showNums):
+        if showNums:
+            print("cellNum Added")
+            for patch in self.cellPatches:
+                coords = list(patch.cell.polygon.centroid.coords[0])
+                cellNum = patch.cell.cell
+                panel.text.append(self.plot_cellNum(coords[0], coords[1], cellNum,panel))
+        else:
+            print("CellNums Removed")
+            for text in panel.text:
+                text.remove()
+            panel.text.clear()
+
+        panel.canvas.draw()
+
+    def plot_cellNum(self, x, y, num,panel):
+        return panel.ax.text(
+            x, y, num, transform=ccrs.Geodetic(), size=6)
     def get_vorPlotLim(self, cellCenters):
 
         coordsInv = zip(*cellCenters)

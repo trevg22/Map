@@ -80,6 +80,7 @@ class Cell:
         self.polygon = inc_poly
         self.type = None
         self.area = None
+        self.neighbors=[]
 
     def set_alpha(self, inc_alpha):
         self.alpha = inc_alpha

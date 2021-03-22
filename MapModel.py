@@ -97,8 +97,17 @@ class MapModel:
                 cells[index].type = "Grid"
                 cells[index].set_cell(index + 1)
                 cells[index].area = area
-        self.cells = cells
 
+                
+        #find cell neighbors
+        for cell in cells:
+            for nCell in cells:
+                if cell.polygon.touches(nCell.polygon):
+                    cell.neighbors.append(nCell.cell)
+
+
+        self.cells = cells
+        
     def find_normalizedMax(self, response):
         max = 0
         numCells = len(self.cells)

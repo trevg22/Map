@@ -1,5 +1,6 @@
 # Map Viewer
 # settings.py
 # Holds initial global settings values
-numLegendEntries = 6
+numLegendEntries = 4
 defLegendLoc = "lower left"
+showCellNums=True

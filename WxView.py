@@ -25,7 +25,7 @@ from WxFrames import (
 class View(wx.Frame):
     def __init__(self):
         # super().__init__(wx.ID_ANY,"Map Viewer",size=(500,500))
-        super().__init__(None, size=(500, 500))
+        super().__init__(None, size=(600, 400))
         self.mapController = Controller(self)
         self.tpamFile = "tpam2.json"
         self.frames = []
@@ -36,10 +36,9 @@ class View(wx.Frame):
         frame = self
         menuBar = AppMenu(frame, self)
         self.spinup_mapDataSet(None)
-        self.spawn_mapPanel(frame)
+        self.spawn_mapPanel(None,frame)
         self.spawn_dataPanel(None)
         # self.spawn_tpamGrid()
-        frame.Show()
 
     # create menu bar at top
 
@@ -69,7 +68,7 @@ class View(wx.Frame):
             if isinstance(panel, MapParentPanel):
                 panel.plotPanel.dataPanel = dataPanel
                 dataPanel.plotPanel = panel.plotPanel
-        self.panels.append(panel)
+        self.panels.append(dataPanel)
 
     def spawn_settingsPanel(self, controlPanel):
         frame = wx.Frame(None)
@@ -89,8 +88,13 @@ class View(wx.Frame):
         frame.SetSizer(vSizer)
         frame.Show()
 
-    def spawn_mapPanel(self, parent):
-        parPanel = MapParentPanel(parent, self)
+    def spawn_mapPanel(self,event, parent=None):
+        if parent is None:
+            parent=wx.Frame(None,size=(600,400))
+            parPanel = MapParentPanel(parent, self)
+        else:
+            parPanel = MapParentPanel(parent, self)
+
         self.panels.append(parPanel)
         plotPanel = parPanel.plotPanel
         controlPanel = parPanel.controlPanel
@@ -100,10 +104,17 @@ class View(wx.Frame):
         self.mapController.config_controlWidgets(controlPanel)
         self.mapController.update_map(parPanel)
         self.mapController.update_legend(parPanel)
+        _thread.start_new_thread(
+            self.mapController.query_tpamforSlice, (parPanel.controlPanel, self.tpamFile)
+        )        
+        for panel in self.panels:
+            if isinstance(panel,MapdataPanel):
+                parPanel.plotPanel.dataPanel=panel
+                print("data Panel linked")
         # controlFrame: MapControlFrame = frame.get_controlFrame()
         # update map for first time
         # self.map_responseChanged(controlFrame, None)
-
+        parent.Show()
     def spawn_plotPanel(self, parent):
         panel = MapPlotPanel(parent)
 
@@ -174,12 +185,16 @@ class View(wx.Frame):
             if dataPanel is not None:
                 self.mapController.write_cellData(plotPanel)
 
-    def update_map(self, panel):
-        if isinstance(panel, colorPanel):
+    def update_map(self, panel,showCellNums=None):
+        if isinstance(panel, ColorPanel):
             updatePanel = panel.controlPanel
+        else:
+            updatePanel=panel
         self.mapController.update_map(updatePanel)
         self.mapController.update_legend(updatePanel)
 
+        if showCellNums is not None:
+            self.mapController.plot_cellNums(updatePanel.plotPanel,showCellNums)
     def update_legend(self, panel):
         self.mapController.update_legend(panel)
 
@@ -213,7 +228,7 @@ class View(wx.Frame):
 
     def filter_drop(self, panel, event):
         print("drop filtered")
-        if isinstance(panel, MapControlPanel) or isinstance(panel, colorPanel):
+        if isinstance(panel, MapControlPanel) or isinstance(panel, ColorPanel):
             targs = []
             resp_targs = self.mapController.get_reponseNames()
             respName = panel.respDrop.GetStringSelection()

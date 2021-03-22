@@ -1,3 +1,4 @@
+import time
 from typing import List
 
 import cartopy.crs as ccrs
@@ -8,10 +9,10 @@ import wx.lib.agw.aui as aui
 import wx.lib.agw.floatspin as fs
 import wx.lib.mixins.inspection as wit
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-from matplotlib.backends.backend_wxagg import (
-    NavigationToolbar2WxAgg as NavigationToolbar,
-)
+from matplotlib.backends.backend_wxagg import \
+    NavigationToolbar2WxAgg as NavigationToolbar
 
+import settings
 from Polymap import CellPatch
 from SettingsPanel import SettingsNotebook
 
@@ -57,6 +58,7 @@ class MapControlPanel(wx.Panel):
         self._simIdLabels = []
         self._plotPanel = None
         self._settingsNotebook = None
+        
 
     def place_widgets(self):
         self.grid = wx.FlexGridSizer(5 + len(self.simIdLabels), 3, 3)
@@ -155,6 +157,10 @@ class MapControlPanel(wx.Panel):
     def target(self):
         return self.tgtDrop.GetStringSelection()
 
+    @property
+    def time(self):
+        return self.timeSpin.GetValue()
+
     @plotPanel.setter
     def plotPanel(self, panel):
         self._plotPanel = panel
@@ -177,6 +183,7 @@ class MapControlPanel(wx.Panel):
         sliderIndex = self.timeSlider.GetValue()
         timeInc = float(self.timeSpin.GetIncrement())
         simTime = sliderIndex * timeInc
+        
         self.timeSpin.SetValue(simTime)
         self.view.map_timeSliderChanged(self, None)
 
@@ -195,7 +202,8 @@ class MapPlotPanel(wx.Panel):
         self._currCell = None
         self._hoverCell = 0
         self.legendLoc = "lower left"
-        self.numThresh = 4
+        self.numThresh = settings.numLegendEntries
+        self.text=[]
         self.initPlot()
         self.bind_widgets()
 
@@ -368,7 +376,7 @@ class TpamGrid(wx.Panel):
         super().__init__(parent=parent)
         self.grid = grid.Grid(self)
         self.currRow = 0
-        self.grid.CreateGrid(22, 10)
+        self.grid.CreateGrid(30, 12)
         self.grid.HideColLabels()
         vSizer = wx.BoxSizer(wx.VERTICAL)
         vSizer.Add(self.grid, 1, 1, 5)
