@@ -59,12 +59,12 @@ class Controller:
         for frame in frames:
             if isinstance(frame, MapParentPanel):
                 self.config_mapPlot(frame)
-                self.config_mapWidgets(frame.controlFrame)
+                self.config_mapWidgets(frame.controlPanel)
 
             elif isinstance(frame, ColorParentFrame):
                 self.config_colorWidgets(frame)
 
-            elif isinstance(frame, MapControlFrame):
+            elif isinstance(frame, MapControlPanel):
                 self.config_mapWidgets(frame)
 
     # config map widgets sliders/dropdowns
@@ -191,7 +191,6 @@ class Controller:
         simIndex = self.find_currSimIndex(controlPanel)
         timeRange, stepsPerDay = self.MapModel.get_timeParams()
         timeStep = controlPanel.time
-        densityOn = 0
         timeIndex = round(timeStep * stepsPerDay)
 
         resp_targ = controlPanel.resp_targ
@@ -199,8 +198,6 @@ class Controller:
 
         responseIndex = currResp.index
 
-        if densityOn:
-            densityMax = self.MapModel.find_normalizedMax(responseIndex)
         dataList = []
 
         for cell in range(numCells):
@@ -208,12 +205,8 @@ class Controller:
                 simIndex, timeIndex, cell + 1, responseIndex
             )
             dataList.append(data)
-            if densityOn:
-                area = vorCells[cell].area
-                color = currRespgen_colorNorm(data, densityMax, area)
-            else:
-                color = currResp.gen_color(data)
-                color = currResp.gen_cmapColor(data)
+            color = currResp.gen_color(data)
+            color = currResp.gen_cmapColor(data)
             # update color on plot
             plotPanel.cellPatches[cell].set_facecolor(color)
             if color != [1, 1, 1]:
@@ -416,24 +409,19 @@ class Controller:
                     currCellIndex=cells.index(cellNum)
                     rowIndex=stride*currCellIndex
                     col=1
-                    print("neighbors: ",cell.cell.neighbors)
-                    print("cells: ",cells)
 
                     for nieghbor in cell.cell.neighbors:
                         
                         if nieghbor in cells:
-                            print(nieghbor,"in cells")    
                             colIndex=cells.index(nieghbor)
                             tpamPanel.grid.SetCellValue(currRow,col,str(nieghbor))
                             tpamPanel.grid.SetCellValue(currRow+1,col,str(m[rowIndex+colIndex]))
-                            tpamPanel.grid.SetCellValue(currRow+2,col,str(m[currCellIndex+col*stride]))
+                            tpamPanel.grid.SetCellValue(currRow+2,col,str(m[currCellIndex+colIndex*stride]))
                             
                             col=col+1
                         else:
-                            print(nieghbor,"not in cells")
+                            pass
                     neighLen=len(cell.cell.neighbors)
-                    print("rowIndex",rowIndex)
-                    print("neighbor len",neighLen)
                     tpamPanel.grid.SetCellValue(currRow,col+1,"Undiscovered")
                     tpamPanel.grid.SetCellValue(currRow+1,col+1,str(m[rowIndex+stride-2]))
                     tpamPanel.grid.SetCellValue(currRow,col+2,"Unaware")
@@ -638,20 +626,28 @@ class Controller:
     def get_reponseNames(self):
         return self.MapModel.get_responseNames()
 
-    def query_tpamforSlice(self, panel, fileName):
-        controlPanel = panel
+    def query_tpamforSlice(self, panel, fileName,side=0):
+        controlPanel=panel
+
+        if controlPanel is None:
+            controlPanel = self.prevControlPanel
+        else:
+            if self.prevSide==-1:
+                self.prevSide=0
+            side=self.prevSide
+
         simId = controlPanel.simId
         target = controlPanel.target
         stepsPerDay = self.MapModel.get_timeParams()[1]
         timeStep = controlPanel.timeSpin.GetValue()
         time = round(timeStep * stepsPerDay)
-        side = 0
         if (
             simId != self.prevSimId
             or time != self.prevTime
             or side != self.prevSide
             or target != self.prevTarget
         ):
+            print("side",side)
             self.tpamSlice = self.MapModel.getTpamByTimeSideTarget(
                 fileName, simId, time, side, target
             )
@@ -659,6 +655,8 @@ class Controller:
             self.prevTime = time
             self.prevSide = side
             self.prevTarget = target
+            self.prevSide=side
+            self.prevControlPanel=controlPanel
 
         plotPanel = controlPanel.plotPanel
         dataPanel = plotPanel.dataPanel

@@ -47,7 +47,7 @@ class View(wx.Frame):
 
     def spawn_tpamGrid(self):
         frame = wx.Frame(None)
-        panel = TpamGrid(frame, None)
+        panel = TpamGrid(frame, self)
         frame.Show()
 
     def spawn_dataPanel(self, event):
@@ -60,7 +60,7 @@ class View(wx.Frame):
         frame.SetSizer(vSizer)
         frame.Show()
         frame2 = wx.Frame(None)
-        tpamPanel = TpamGrid(frame2, None)
+        tpamPanel = TpamGrid(frame2, self)
         dataPanel.tpamGrid = tpamPanel
         frame2.Show()
 
@@ -152,7 +152,7 @@ class View(wx.Frame):
         _thread.start_new_thread(
             self.mapController.query_tpamforSlice, (panel, self.tpamFile)
         )
-
+        self.mapController.write_cellData(panel.plotPanel)
     # event capture for sim Id drop down
 
     def map_simIdDropdownChanged(self, panel, event):
@@ -221,6 +221,9 @@ class View(wx.Frame):
     def write_cellData(self, panel, event):
         self.mapController.write_cellData(panel)
 
+    def query_tpamforSlice(self,event,side):
+        self.mapController.query_tpamforSlice(None,None,side=side)
+        print("side query",side)
     # save button was changed on color props
 
     def save_snapShot(self):

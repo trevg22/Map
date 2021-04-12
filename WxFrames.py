@@ -374,14 +374,31 @@ class MapdataPanel(wx.Panel):
 class TpamGrid(wx.Panel):
     def __init__(self, parent, view):
         super().__init__(parent=parent)
+
+        self.view=view
+        sideLabel=wx.StaticText(self,label="Side")
+        self.sideDrop=wx.ComboBox(self)
+        self.sideDrop.Clear()
+        self.sideDrop.AppendItems(["Red","Blue"])
+        self.sideDrop.SetSelection(0)
         self.grid = grid.Grid(self)
         self.currRow = 0
         self.grid.CreateGrid(30, 12)
         self.grid.HideColLabels()
+        
         vSizer = wx.BoxSizer(wx.VERTICAL)
+        hSizer=wx.BoxSizer(wx.HORIZONTAL)
+        hSizer.Add(sideLabel,1,1,5)
+        hSizer.Add(self.sideDrop,1,1,5)
+        vSizer.Add(hSizer,0,0,0)
         vSizer.Add(self.grid, 1, 1, 5)
         self.SetSizer(vSizer)
 
+        self.bind_widgets()
+
+    def bind_widgets(self):
+        self.sideDrop.Bind(wx.EVT_TEXT,lambda event:self.view.query_tpamforSlice(event,side=self.sideDrop.GetSelection()))
+        
     def write_2d(self, row, data):
         self.grid.InsertRows(self.currRow, 1)
 
